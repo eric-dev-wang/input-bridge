@@ -25,7 +25,7 @@ class BridgeConnectionCoordinatorTest {
     fun reconnectDiscoversDeviceForwardsAndPublishesConnectedState() {
         val device = AdbDevice("serial", "Pixel 8")
         val adb = FakeAdbClient(deviceLists = ArrayDeque(listOf(listOf(device))))
-        val client = RecordingWebSocketClient()
+        val client = RecordingBridgeClient()
         val coordinator = newCoordinator(adb = adb, client = client)
 
         coordinator.reconnect()
@@ -39,18 +39,18 @@ class BridgeConnectionCoordinatorTest {
     }
 
     @Test
-    fun reconnectRebuildsForwardOnceAfterWebSocketConnectionFailure() {
+    fun reconnectRebuildsForwardOnceAfterTCPConnectionFailure() {
         val device = AdbDevice("serial", "Pixel 8")
         val adb = FakeAdbClient(deviceLists = ArrayDeque(listOf(listOf(device))))
         val clients = ArrayDeque(
             listOf(
-                RecordingWebSocketClient(
-                    connectResult = BridgeWebSocketResult.Failure(
+                RecordingBridgeClient(
+                    connectResult = BridgeClientResult.Failure(
                         message = "connection refused",
-                        code = "WEBSOCKET_CONNECTION_FAILED",
+                        code = "TCP_CONNECTION_FAILED",
                     ),
                 ),
-                RecordingWebSocketClient(),
+                RecordingBridgeClient(),
             ),
         )
         val coordinator = newCoordinator(adb = adb, clientFactory = { clients.removeFirst() })
@@ -63,7 +63,7 @@ class BridgeConnectionCoordinatorTest {
 
     @Test
     fun pushedTextChangedUpdatesDisplayedStateWithoutPolling() {
-        val client = RecordingWebSocketClient()
+        val client = RecordingBridgeClient()
         val coordinator = newCoordinator(client = client)
         coordinator.reconnect()
 
@@ -75,8 +75,8 @@ class BridgeConnectionCoordinatorTest {
     }
 
     @Test
-    fun websocketErrorTransitionsToErrorState() {
-        val client = RecordingWebSocketClient()
+    fun tcpErrorTransitionsToErrorState() {
+        val client = RecordingBridgeClient()
         val coordinator = newCoordinator(client = client)
         coordinator.reconnect()
 
@@ -84,13 +84,13 @@ class BridgeConnectionCoordinatorTest {
 
         assertEquals(BridgeConnectionState.ERROR, coordinator.state.connectionState)
         assertEquals("Offline", coordinator.state.serverStatus)
-        assertEquals("WebSocket connection failed.", coordinator.state.errorMessage)
+        assertEquals("TCP connection failed.", coordinator.state.errorMessage)
     }
 
     @Test
-    fun lateTextChangedFromPreviousWebSocketIsIgnoredAfterReconnect() {
-        val firstClient = RecordingWebSocketClient()
-        val secondClient = RecordingWebSocketClient()
+    fun lateTextChangedFromPreviousTCPIsIgnoredAfterReconnect() {
+        val firstClient = RecordingBridgeClient()
+        val secondClient = RecordingBridgeClient()
         val clients = ArrayDeque(listOf(firstClient, secondClient))
         val coordinator = newCoordinator(clientFactory = { clients.removeFirst() })
 
@@ -107,7 +107,7 @@ class BridgeConnectionCoordinatorTest {
 
     @Test
     fun repeatedTextChangedDoesNotClearCopyAndClearFeedback() {
-        val client = RecordingWebSocketClient()
+        val client = RecordingBridgeClient()
         val coordinator = newCoordinator(client = client)
         coordinator.reconnect()
 
@@ -138,7 +138,7 @@ class BridgeConnectionCoordinatorTest {
     fun allBridgeActionsAreIgnoredWhileCopyAndClearIsBusy() {
         val executor = QueueAfterFirstExecutor()
         val adb = FakeAdbClient(deviceLists = ArrayDeque(listOf(listOf(AdbDevice("serial", "Pixel 8")))))
-        val client = RecordingWebSocketClient()
+        val client = RecordingBridgeClient()
         val coordinator = newCoordinator(adb = adb, client = client, executor = executor)
         coordinator.reconnect()
         val actionCount = adb.actions.size
@@ -157,7 +157,7 @@ class BridgeConnectionCoordinatorTest {
         val executor = QueueAfterFirstExecutor()
         val clipboard = RecordingClipboardWriter()
         val coordinator = newCoordinator(
-            client = RecordingWebSocketClient(),
+            client = RecordingBridgeClient(),
             clipboardWriter = clipboard,
             executor = executor,
         )
@@ -171,8 +171,8 @@ class BridgeConnectionCoordinatorTest {
     }
 
     @Test
-    fun copyUsesDisplayedSnapshotAndDoesNotSendWebSocketClear() {
-        val client = RecordingWebSocketClient()
+    fun copyUsesDisplayedSnapshotAndDoesNotSendTCPClear() {
+        val client = RecordingBridgeClient()
         val clipboard = RecordingClipboardWriter()
         val coordinator = newCoordinator(client = client, clipboardWriter = clipboard)
         coordinator.reconnect()
@@ -186,7 +186,7 @@ class BridgeConnectionCoordinatorTest {
 
     @Test
     fun copyFailurePreventsClear() {
-        val client = RecordingWebSocketClient()
+        val client = RecordingBridgeClient()
         val clipboard = RecordingClipboardWriter(ClipboardWriteResult.Failure("Clipboard write failed."))
         val coordinator = newCoordinator(client = client, clipboardWriter = clipboard)
         coordinator.reconnect()
@@ -200,8 +200,8 @@ class BridgeConnectionCoordinatorTest {
 
     @Test
     fun clearFailurePreservesCopiedText() {
-        val client = RecordingWebSocketClient(
-            clearResult = BridgeWebSocketResult.Failure("clear failed", "TEXT_CLEAR_FAILED"),
+        val client = RecordingBridgeClient(
+            clearResult = BridgeClientResult.Failure("clear failed", "TEXT_CLEAR_FAILED"),
         )
         val coordinator = newCoordinator(client = client, clipboardWriter = RecordingClipboardWriter())
 
@@ -216,7 +216,7 @@ class BridgeConnectionCoordinatorTest {
     @Test
     fun copyAndClearWritesClipboardBeforeSendingClear() {
         val events = mutableListOf<String>()
-        val client = RecordingWebSocketClient(events = events)
+        val client = RecordingBridgeClient(events = events)
         val coordinator = newCoordinator(
             client = client,
             clipboardWriter = RecordingClipboardWriter(events = events),
@@ -233,9 +233,9 @@ class BridgeConnectionCoordinatorTest {
 
     @Test
     fun versionConflictRefreshesTextAndPreservesCopiedSnapshot() {
-        val client = RecordingWebSocketClient(
-            clearResult = BridgeWebSocketResult.Success(BridgeClearResult.VersionConflict(18L)),
-            snapshotResult = BridgeWebSocketResult.Success(TextSnapshot("new text", 18L, 102L)),
+        val client = RecordingBridgeClient(
+            clearResult = BridgeClientResult.Success(BridgeClearResult.VersionConflict(18L)),
+            snapshotResult = BridgeClientResult.Success(TextSnapshot("new text", 18L, 102L)),
         )
         val coordinator = newCoordinator(client = client, clipboardWriter = RecordingClipboardWriter())
         coordinator.reconnect()
@@ -253,8 +253,8 @@ class BridgeConnectionCoordinatorTest {
     }
 
     @Test
-    fun closedWebSocketTransitionsToServerOffline() {
-        val client = RecordingWebSocketClient()
+    fun closedTCPTransitionsToServerOffline() {
+        val client = RecordingBridgeClient()
         val coordinator = newCoordinator(client = client)
         coordinator.reconnect()
 
@@ -266,8 +266,8 @@ class BridgeConnectionCoordinatorTest {
     }
 
     @Test
-    fun disposeClosesWebSocketOffCallingThread() {
-        val client = RecordingWebSocketClient()
+    fun disposeClosesTCPOffCallingThread() {
+        val client = RecordingBridgeClient()
         val executor = SwitchingExecutor()
         val coordinator = newCoordinator(client = client, executor = executor)
         coordinator.reconnect()
@@ -284,8 +284,8 @@ class BridgeConnectionCoordinatorTest {
         adb: FakeAdbClient = FakeAdbClient(
             deviceLists = ArrayDeque(listOf(listOf(AdbDevice("serial", "Pixel 8")))),
         ),
-        client: RecordingWebSocketClient = RecordingWebSocketClient(),
-        clientFactory: () -> BridgeWebSocketClient = { client },
+        client: RecordingBridgeClient = RecordingBridgeClient(),
+        clientFactory: () -> BridgeClient = { client },
         executor: Executor = Executor { it.run() },
         clipboardWriter: ClipboardWriter = RecordingClipboardWriter(),
         deviceSelector: DeviceSelector = DeviceSelector { it.first() },
@@ -295,7 +295,7 @@ class BridgeConnectionCoordinatorTest {
             isUsable = { true },
         ),
         adbClientFactory = { adb },
-        webSocketClientFactory = clientFactory,
+        bridgeClientFactory = clientFactory,
         deviceSelector = deviceSelector,
         executor = executor,
         clipboardWriter = clipboardWriter,
@@ -344,35 +344,35 @@ class BridgeConnectionCoordinatorTest {
         }
     }
 
-    private class RecordingWebSocketClient(
+    private class RecordingBridgeClient(
         private val initialSnapshot: TextSnapshot = TextSnapshot("你好", 17L, 100L),
-        private val clearResult: BridgeWebSocketResult<BridgeClearResult> =
-            BridgeWebSocketResult.Success(BridgeClearResult.Cleared(17L, 18L)),
-        private val snapshotResult: BridgeWebSocketResult<TextSnapshot> =
-            BridgeWebSocketResult.Success(initialSnapshot),
-        private val connectResult: BridgeWebSocketResult<TextSnapshot> =
-            BridgeWebSocketResult.Success(initialSnapshot),
+        private val clearResult: BridgeClientResult<BridgeClearResult> =
+            BridgeClientResult.Success(BridgeClearResult.Cleared(17L, 18L)),
+        private val snapshotResult: BridgeClientResult<TextSnapshot> =
+            BridgeClientResult.Success(initialSnapshot),
+        private val connectResult: BridgeClientResult<TextSnapshot> =
+            BridgeClientResult.Success(initialSnapshot),
         private val events: MutableList<String>? = null,
-    ) : BridgeWebSocketClient {
+    ) : BridgeClient {
         var connectCalls = 0
         var snapshotCalls = 0
         var clearCalls = 0
         var closeThread: Thread? = null
         val closeLatch = CountDownLatch(1)
-        private var listener: BridgeWebSocketEventListener? = null
+        private var listener: BridgeClientEventListener? = null
 
-        override fun connect(listener: BridgeWebSocketEventListener): BridgeWebSocketResult<TextSnapshot> {
+        override fun connect(listener: BridgeClientEventListener): BridgeClientResult<TextSnapshot> {
             connectCalls++
             this.listener = listener
             return connectResult
         }
 
-        override fun getSnapshot(): BridgeWebSocketResult<TextSnapshot> {
+        override fun getSnapshot(): BridgeClientResult<TextSnapshot> {
             snapshotCalls++
             return snapshotResult
         }
 
-        override fun clearText(expectedVersion: Long): BridgeWebSocketResult<BridgeClearResult> {
+        override fun clearText(expectedVersion: Long): BridgeClientResult<BridgeClearResult> {
             clearCalls++
             events?.add("clear:$expectedVersion")
             return clearResult

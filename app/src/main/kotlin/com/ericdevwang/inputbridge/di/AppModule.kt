@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Build
 import com.ericdevwang.inputbridge.core.data.repository.TextRepository
-import com.ericdevwang.inputbridge.server.InputWebSocketServer
+import com.ericdevwang.inputbridge.server.InputBridgeServer
 import com.ericdevwang.inputbridge.ui.main.MainScreenViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
@@ -18,7 +18,7 @@ val appModule = module {
         (androidContext() as Application).readVersionName()
     }
     single {
-        InputWebSocketServer(
+        InputBridgeServer(
             repository = get(),
             appVersion = get(named(APP_VERSION_QUALIFIER)),
         )

@@ -30,7 +30,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keep the local WebSocket server available for ADB text bridge requests." />
+                android:value="Keep the local TCP server available for ADB text bridge requests." />
         </service>
     </application>
 

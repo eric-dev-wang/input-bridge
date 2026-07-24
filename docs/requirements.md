@@ -1,6 +1,6 @@
 # Input Bridge 需求说明
 
-> 文档状态：WebSocket 协议迁移已经完成。本文件描述产品约束、边界和验收范围；具体运行行为以源码和测试为准，WebSocket 协议定义以 [`docs/websocket-protocol.md`](websocket-protocol.md) 为准。
+> 文档状态：TCP 协议迁移已经完成。本文件描述产品约束、边界和验收范围；具体运行行为以源码和测试为准，TCP 协议定义以 [`docs/tcp-protocol.md`](tcp-protocol.md) 为准。
 
 ## 1. 产品定义
 
@@ -19,11 +19,11 @@ Android 输入文本
         ↓
 Android App 内存状态和异步持久化
         ↓
-Android Foreground Service 中的 WebSocket Server
+Android Foreground Service 中的 TCP Server
         ↓
 ADB forward tcp:18080 tcp:18080
         ↓
-Android Studio Plugin WebSocket Client
+Android Studio Plugin TCP Client
         ↓
 Tool Window 实时展示文本
         ↓
@@ -44,38 +44,49 @@ Tool Window 实时展示文本
 4. 看到手机端文本的初始快照和后续实时更新。
 5. 点击 Copy，将当前显示文本写入系统剪贴板。
 6. 点击 Copy & Clear，在复制成功且版本未冲突时清空手机文本。
-7. 通过 Reconnect 恢复断开的设备或 WebSocket 连接。
+7. 通过 Reconnect 恢复断开的设备或 TCP 连接。
 
 ### 2.3 技术目标
 
 - 只通过 USB ADB 通信，不依赖局域网。
 - Android Server 只监听 `127.0.0.1:18080`。
-- 使用持久 WebSocket 连接推送文本变化，不使用轮询。
+- 使用持久 TCP 连接推送文本变化，不使用轮询。
 - 支持 Unicode、中文、英文、Emoji、换行、制表符和代码片段。
 - 所有 ADB、Socket 和 Clipboard 阻塞操作都不运行在 IntelliJ EDT。
 - 所有连接和命令操作都使用明确的超时。
 
 ## 3. 模块边界
 
-根 Gradle 项目包含两个产品模块和一个共享协议模块：
+根 Gradle 项目包含两个产品模块、一个共享业务协议模块和三个纯 Kotlin/JVM 连接模块：
 
 ```text
 app/
 protocol/
+core/framing/
+core/connection-client/
+core/connection-server/
 android-studio-plugin/
 ```
 
 ### 3.1 `app/`
 
-负责文本输入、当前状态、DataStore 异步持久化、Foreground Service 和 WebSocket Server。
+负责文本输入、当前状态、DataStore 异步持久化、Foreground Service 和 TCP Server。
 
 ### 3.2 `protocol/`
 
-负责版本化 WebSocket wire models、消息类型、序列化配置和协议常量。该模块为纯 Kotlin/JVM，不依赖 Android、Ktor Server、DataStore、Koin 或 IntelliJ Platform。
+负责版本化业务 TCP wire models、消息类型、序列化配置和业务协议版本。该模块为纯 Kotlin/JVM，不依赖 Android、Ktor、DataStore、Koin 或 IntelliJ Platform。
+
+### 3.3 `core/framing/`
+
+只负责长度前缀字节 framing，不依赖 `protocol`，最大 payload 为 `512 KiB`。
+
+### 3.4 `core/connection-client/` 与 `core/connection-server/`
+
+分别负责 TCP client/server socket 生命周期、framing、读写线程、单连接限制和 Ping/Pong。它们依赖 `protocol` 与 `core/framing`；业务握手、快照和清空逻辑仍由产品模块负责。
 
 ### 3.3 `android-studio-plugin/`
 
-负责 Tool Window、ADB 定位与设备处理、端口转发、WebSocket Client、连接状态、Clipboard 写入和 Copy & Clear。
+负责 Tool Window、ADB 定位与设备处理、端口转发、TCP Client、连接状态、Clipboard 写入和 Copy & Clear。
 
 ## 4. 非目标和硬边界
 
@@ -109,16 +120,16 @@ adb forward tcp:18080 tcp:18080
 Plugin 连接：
 
 ```text
-ws://127.0.0.1:18080/api/v1/ws
+127.0.0.1:18080
 ```
 
 手机端口和 ADB forward 端口固定为 `18080`，端口值集中定义在 `:protocol` 和各自的网络配置中，不得散落硬编码。
 
 ### 5.2 状态来源
 
-Android `TextRepository.state` 的内存状态是 UI 和 Server 的唯一可信来源。DataStore 只负责异步持久化和启动恢复，不得阻塞输入或 WebSocket 推送。
+Android `TextRepository.state` 的内存状态是 UI 和 Server 的唯一可信来源。DataStore 只负责异步持久化和启动恢复，不得阻塞输入或 TCP 推送。
 
-Plugin 以当前连接收到的初始快照和 `text_changed` 事件更新 Tool Window。不得通过定时任务补偿 WebSocket 事件。
+Plugin 以当前连接收到的初始快照和 `text_changed` 事件更新 Tool Window。不得通过定时任务补偿 TCP 事件。
 
 ## 6. Android App 需求
 
@@ -152,22 +163,22 @@ data class TextState(
 
 - App 打开时自动启动 Foreground Service。
 - 不提供用户停止入口。
-- Service 启动 WebSocket Server，停止时关闭 Server 和活动会话。
+- Service 启动 TCP Server，停止时关闭 Server 和活动会话。
 - Server 重复启动不得重复绑定端口。
 - 启动失败、停止和重试状态必须可观察。
 - Server 只监听 `127.0.0.1`。
-- 单条 WebSocket 消息最大为 `512 KiB`。
+- 单条 TCP 消息最大为 `512 KiB`。
 - Server 使用 15 秒 ping 周期和 30 秒空闲超时。
 
-## 7. WebSocket 协议
+## 7. TCP 协议
 
-协议版本为 `2`，完整定义见 [`docs/websocket-protocol.md`](websocket-protocol.md)。
+协议版本为 `3`，完整定义见 [`docs/tcp-protocol.md`](tcp-protocol.md)。
 
 ### 7.1 Handshake
 
 客户端连接后必须首先发送 `hello`，包含 `protocolVersion` 和 `requestId`。Server 回复 `hello_ack`，然后发送不带 request ID 的初始 `text_snapshot`。
 
-版本不兼容、首条消息错误、无效 JSON、二进制帧和非法消息顺序都必须返回明确错误，并在协议错误后关闭会话。
+版本不兼容、首条消息错误、无效 JSON、非法长度、无效 UTF-8 和非法消息顺序都必须返回明确错误，并在协议错误后关闭会话。
 
 ### 7.2 Server events
 
@@ -224,7 +235,7 @@ Tool Window 至少显示：
 - 必须先确认 Clipboard 写入成功，再发送 Clear。
 - Clipboard 失败时不得清空。
 - 版本冲突时保留已复制内容，刷新当前快照并显示明确提示。
-- Reconnect 由用户触发，重新处理 ADB、forward 和 WebSocket；不执行后台自动重连。
+- Reconnect 由用户触发，重新处理 ADB、forward 和 TCP；不执行后台自动重连。
 
 ## 9. ADB 和线程模型
 
@@ -232,7 +243,7 @@ ADB 查找顺序：Android Studio SDK 配置、`ANDROID_SDK_ROOT`、`ANDROID_HOM
 
 设备处理必须覆盖无设备、单设备、多设备、unauthorized、offline 和设备断开。多设备时允许用户从下拉列表选择；没有当前选择时使用选择器策略提供默认设备。
 
-ADB 子进程必须在后台执行，捕获 stdout、stderr、退出码并使用 5 秒超时。WebSocket 连接超时为 1 秒，命令请求超时为 2 秒。不得无限重试；连接失败最多重建一次 forward。
+ADB 子进程必须在后台执行，捕获 stdout、stderr、退出码并使用 5 秒超时。TCP 连接超时为 2 秒，命令请求超时为 4 秒。不得无限重试；连接失败最多重建一次 forward。
 
 所有状态回调必须安全地切回 IntelliJ EDT 更新 UI。Project 或 Tool Window 销毁后，后台结果不得继续触碰已销毁 UI。
 
@@ -240,7 +251,7 @@ ADB 子进程必须在后台执行，捕获 stdout、stderr、退出码并使用
 
 Plugin 只允许写入系统 Clipboard，不读取、监控、保存或恢复 Clipboard 内容。
 
-允许记录设备 serial、端口、WebSocket 路径、状态、错误类型、文本长度和版本号。禁止记录完整文本、文本片段、消息正文或 Clipboard 内容。
+允许记录设备 serial、端口、TCP 状态、错误类型、文本长度和版本号。禁止记录完整文本、文本片段、消息正文或 Clipboard 内容。
 
 示例：
 
@@ -256,7 +267,7 @@ Fetched text successfully: version=17, length=123
 
 ### 11.2 Plugin 测试
 
-覆盖 WebSocket transport 注入、请求 ID 关联、Handshake 失败、超时、关闭、错误回调、Reconnect 生命周期、旧会话晚到回调、无轮询实时更新、Copy-before-Clear、Clipboard 失败和版本冲突。
+覆盖 TCP transport 注入、请求 ID 关联、Handshake 失败、超时、关闭、错误回调、Reconnect 生命周期、旧会话晚到回调、无轮询实时更新、Copy-before-Clear、Clipboard 失败和版本冲突。
 
 ### 11.3 Tool Window UI 测试
 
@@ -267,7 +278,7 @@ Fetched text successfully: version=17, length=123
 通过 ADB 完成：
 
 1. 设备授权和 forward。
-2. WebSocket 初始连接和快照。
+2. TCP 初始连接和快照。
 3. 快速输入中文、英文、Emoji、多行文本和代码。
 4. 不需要手动操作的实时更新。
 5. Copy 与 Copy & Clear。
@@ -290,6 +301,6 @@ GitHub Actions 在 Pull Request 和推送到 `main` 时运行完整验证矩阵�
 交付物包括：
 
 - 可构建的 Android App 和 Plugin 工程。
-- WebSocket 协议文档和真机集成清单。
+- TCP 协议文档和真机集成清单。
 - 自动化测试及 CI 验证。
 - 不包含生成目录、外部密钥或未声明依赖。

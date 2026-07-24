@@ -6,7 +6,7 @@
     <string name="clear">Clear</string>
     <string name="server_notification_channel_name">Input bridge server</string>
     <string name="server_notification_title">Input Bridge</string>
-    <string name="server_notification_text">Local WebSocket server is running</string>
+    <string name="server_notification_text">Local TCP server is running</string>
     <string name="persistence_error">Text could not be saved.</string>
     <string name="initialization_error">Saved text could not be loaded.</string>
 </resources>

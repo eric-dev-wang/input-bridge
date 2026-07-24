@@ -16,7 +16,7 @@ class BridgeLogTest {
 
     @Test
     fun failureMessageContainsExceptionTypeButNotExceptionMessage() {
-        val message = BridgeLog.failureMessage("WebSocket request", IllegalStateException("secret text"))
+        val message = BridgeLog.failureMessage("TCP request", IllegalStateException("secret text"))
 
         assertTrue(message.contains("IllegalStateException"))
         assertFalse(message.contains("secret text"))

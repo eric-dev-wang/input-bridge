@@ -10,10 +10,10 @@ import org.junit.Test
 
 class ProtocolModelSerializationTest {
     @Test
-    fun websocketMessagesUseTypedDiscriminatorAndRequestIds() {
+    fun tcpMessagesUseTypedDiscriminatorAndRequestIds() {
         assertEquals(
-            "{\"type\":\"hello\",\"protocolVersion\":2,\"requestId\":\"hello-1\"}",
-            ProtocolJson.default.encodeToString<BridgeMessage>(HelloCommand(2, "hello-1")),
+            "{\"type\":\"hello\",\"protocolVersion\":3,\"requestId\":\"hello-1\"}",
+            ProtocolJson.default.encodeToString<BridgeMessage>(HelloCommand(3, "hello-1")),
         )
         assertEquals(
             "{\"type\":\"text_snapshot\",\"text\":\"中文\\n😀\",\"version\":7,\"updatedAt\":123,\"requestId\":null}",
@@ -28,12 +28,14 @@ class ProtocolModelSerializationTest {
     }
 
     @Test
-    fun allWebsocketMessagesRoundTripThroughSharedJson() {
+    fun allTcpMessagesRoundTripThroughSharedJson() {
         val messages = listOf<BridgeMessage>(
-            HelloCommand(2, "hello-1"),
+            HelloCommand(3, "hello-1"),
             GetSnapshotCommand("snapshot-1"),
             ClearCommand(expectedVersion = 7L, requestId = "clear-1"),
-            HelloAck("ok", "1.0.0", 2, 123L, "hello-1"),
+            HelloAck("ok", "1.0.0", 3, 123L, "hello-1"),
+            Ping("ping-1"),
+            Pong("ping-1"),
             TextSnapshot("", 7L, 123L, requestId = "snapshot-1"),
             TextChanged("中文\n😀", 8L, 124L),
             ClearSucceeded(clearedVersion = 8L, newVersion = 9L, requestId = "clear-1"),
@@ -53,16 +55,16 @@ class ProtocolModelSerializationTest {
     }
 
     @Test(expected = SerializationException::class)
-    fun unknownWebsocketMessageTypeIsRejected() {
+    fun unknownTcpMessageTypeIsRejected() {
         ProtocolJson.default.decodeFromString<BridgeMessage>("{\"type\":\"unknown\"}")
     }
 
     @Test
-    fun knownWebsocketMessageIgnoresUnknownFields() {
+    fun knownTcpMessageIgnoresUnknownFields() {
         assertEquals(
-            HelloCommand(protocolVersion = 2, requestId = "hello-1"),
+            HelloCommand(protocolVersion = 3, requestId = "hello-1"),
             ProtocolJson.default.decodeFromString<BridgeMessage>(
-                "{\"type\":\"hello\",\"protocolVersion\":2," +
+                "{\"type\":\"hello\",\"protocolVersion\":3," +
                     "\"requestId\":\"hello-1\",\"futureField\":true}",
             ),
         )
@@ -70,8 +72,6 @@ class ProtocolModelSerializationTest {
 
     @Test
     fun protocolVersionIsSharedByClientsAndServer() {
-        assertEquals(2, ProtocolConstants.CURRENT_VERSION)
-        assertEquals("127.0.0.1", ProtocolConstants.LOCALHOST)
-        assertEquals(18080, ProtocolConstants.SERVER_PORT)
+        assertEquals(3, ProtocolConstants.CURRENT_VERSION)
     }
 }
