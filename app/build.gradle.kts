@@ -53,10 +53,9 @@ dependencies {
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.koin.androidx.compose)
 
-  // Local WebSocket server
-  implementation(libs.ktor.server.core)
-  implementation(libs.ktor.server.cio)
-  implementation(libs.ktor.server.websockets)
+  // Local TCP server
+  implementation(project(":core:connection-server"))
+  testImplementation(project(":core:framing"))
 
   // Compose
   implementation(libs.androidx.compose.ui)
@@ -71,8 +70,6 @@ dependencies {
   // Local tests: jUnit, coroutines, Android runner
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
-  testImplementation(libs.ktor.server.test.host)
-  testImplementation(libs.ktor.client.websockets)
 
   // Instrumented tests: jUnit rules and runners
   androidTestImplementation(libs.androidx.test.core)

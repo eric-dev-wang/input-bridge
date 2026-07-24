@@ -40,7 +40,7 @@ The scope is recommended for every commit and required when the change clearly b
 | `test` | Adding or changing tests | `test(api): cover multiline responses` |
 | `build` | Build scripts, packaging, or platform configuration | `build(plugin): configure the platform target` |
 | `ci` | Continuous integration or automation configuration | `ci(repo): run module checks on pull requests` |
-| `deps` | Adding, removing, or upgrading dependencies | `deps(app): update the WebSocket server library` |
+| `deps` | Adding, removing, or upgrading dependencies | `deps(app): update the TCP server library` |
 | `perf` | A measurable performance improvement | `perf(plugin): avoid redundant port forwarding` |
 | `chore` | Repository maintenance with no product behavior change | `chore(repo): add the initial project layout` |
 | `revert` | Reverting an earlier commit | `revert(plugin): restore reconnect behavior` |
@@ -54,14 +54,14 @@ Use one scope per commit. Prefer the smallest subsystem that explains the change
 | Scope | Meaning |
 | --- | --- |
 | `app` | Android App module behavior, screens, or ViewModels |
-| `server` | Android-side WebSocket Server lifecycle and handlers |
+| `server` | Android-side TCP Server lifecycle and handlers |
 | `storage` | Android text-state persistence |
-| `api` | WebSocket messages, request correlation, and protocol errors |
+| `api` | TCP messages, request correlation, and protocol errors |
 | `protocol` | Cross-module protocol contracts or shared semantics |
 | `plugin` | Android Studio plugin lifecycle and project integration |
 | `ui` | Tool Window UI and presentation state |
 | `adb` | ADB discovery, device parsing, and port forwarding |
-| `socket` | Plugin WebSocket client, timeouts, and lifecycle |
+| `socket` | Plugin TCP client, timeouts, and lifecycle |
 | `clipboard` | Clipboard write behavior and error handling |
 | `settings` | Plugin settings and persisted configuration |
 | `test` | Cross-module test infrastructure or test fixtures |
@@ -129,7 +129,7 @@ feat(api): add version-aware clear requests
 
 Require the client to send the version it loaded before clearing text.
 
-BREAKING CHANGE: clients must send expectedVersion in the clear WebSocket command.
+BREAKING CHANGE: clients must send expectedVersion in the clear TCP command.
 Refs: #42
 ```
 
@@ -164,22 +164,22 @@ Each commit should have one clear purpose and be independently reviewable.
 
 ```text
 chore(repo): add the initial project layout
-docs(protocol): define the local WebSocket contract
+docs(protocol): define the local TCP contract
 docs(commits): add the repository commit convention
 feat(app): add the multiline text editor
-feat(server): start the local WebSocket server on app launch
+feat(server): start the local TCP server on app launch
 feat(protocol): add version-aware text clearing
 feat(plugin): register the Input Bridge tool window
 feat(adb): detect the configured adb executable
 feat(socket): retry a failed connection after rebuilding forward
 feat(clipboard): write the displayed text to the system clipboard
-fix(plugin): ignore stale WebSocket callbacks
+fix(plugin): ignore stale TCP callbacks
 fix(protocol): preserve emoji and multiline text in messages
 test(storage): restore the current text after process recreation
 test(adb): parse unauthorized and offline devices
 build(plugin): configure the IntelliJ Platform target
-deps(app): add the selected WebSocket server dependency
-refactor(protocol): share app and plugin WebSocket models
+deps(app): add the selected TCP server dependency
+refactor(protocol): share app and plugin TCP models
 ```
 
 ## 10. Before committing

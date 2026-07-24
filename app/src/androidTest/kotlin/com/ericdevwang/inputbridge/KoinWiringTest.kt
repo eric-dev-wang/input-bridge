@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ericdevwang.inputbridge.core.data.repository.DefaultTextRepository
 import com.ericdevwang.inputbridge.core.data.repository.TextRepository
-import com.ericdevwang.inputbridge.server.InputWebSocketServer
+import com.ericdevwang.inputbridge.server.InputBridgeServer
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -28,7 +28,7 @@ class KoinWiringTest {
         assertTrue(firstRepository is DefaultTextRepository)
         assertSame(firstRepository, secondRepository)
 
-        assertTrue(koin.get<InputWebSocketServer>() === koin.get<InputWebSocketServer>())
+        assertTrue(koin.get<InputBridgeServer>() === koin.get<InputBridgeServer>())
 
         val expectedVersion = application.packageManager
             .getPackageInfo(application.packageName, 0)

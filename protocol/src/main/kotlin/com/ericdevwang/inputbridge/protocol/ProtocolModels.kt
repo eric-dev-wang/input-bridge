@@ -29,6 +29,18 @@ data class ClearCommand(
 ) : BridgeMessage
 
 @Serializable
+@SerialName("ping")
+data class Ping(
+    val requestId: String,
+) : BridgeMessage
+
+@Serializable
+@SerialName("pong")
+data class Pong(
+    val requestId: String,
+) : BridgeMessage
+
+@Serializable
 @SerialName("hello_ack")
 data class HelloAck(
     val status: String,

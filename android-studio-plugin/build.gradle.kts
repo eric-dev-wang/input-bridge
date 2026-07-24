@@ -16,6 +16,7 @@ val androidPluginVersion = "261.23567.138"
 
 dependencies {
     implementation(project(":protocol"))
+    implementation(project(":core:connection-client"))
 
     intellijPlatform {
         if (localAndroidStudioPath.isPresent) {

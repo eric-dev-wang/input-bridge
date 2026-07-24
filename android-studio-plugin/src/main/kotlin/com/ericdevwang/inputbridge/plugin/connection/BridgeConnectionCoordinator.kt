@@ -18,7 +18,7 @@ import java.util.concurrent.Executor
 class BridgeConnectionCoordinator(
     private val adbLocator: AdbLocator,
     private val adbClientFactory: (Path) -> AdbClient,
-    private val webSocketClientFactory: () -> BridgeWebSocketClient,
+    private val bridgeClientFactory: () -> BridgeClient,
     private val deviceSelector: DeviceSelector,
     private val executor: Executor,
     private val clipboardWriter: ClipboardWriter,
@@ -34,7 +34,7 @@ class BridgeConnectionCoordinator(
     private var activeAdbClient: AdbClient? = null
 
     @Volatile
-    private var activeWebSocketClient: BridgeWebSocketClient? = null
+    private var activeBridgeClient: BridgeClient? = null
 
     @Volatile
     private var selectedSerial: String? = null
@@ -113,16 +113,16 @@ class BridgeConnectionCoordinator(
             disposed = true
             busy = false
             activeAdbClient = null
-            val client = activeWebSocketClient
-            activeWebSocketClient = null
+            val client = activeBridgeClient
+            activeBridgeClient = null
             listeners.clear()
             client
         }
-        clientToClose?.let(::closeWebSocketAsync)
+        clientToClose?.let(::closeBridgeAsync)
     }
 
     private fun runReconnect() {
-        closeActiveWebSocket()
+        closeActiveBridge()
         try {
             if (disposed) return
             val adbPath = adbLocator.locate()
@@ -188,19 +188,19 @@ class BridgeConnectionCoordinator(
                 is AdbResult.Success -> Unit
             }
 
-            var result = connectWebSocket()
-            if (result is BridgeWebSocketResult.Failure && result.code == "WEBSOCKET_CONNECTION_FAILED") {
+            var result = connectBridge()
+            if (result is BridgeClientResult.Failure && result.code == "TCP_CONNECTION_FAILED") {
                 result = when (val rebuilt = forwardManager.rebuildForward(selected)) {
                     is AdbResult.Failure -> {
                         finishError("ADB port forwarding failed: ${rebuilt.error.message}")
                         return
                     }
-                    is AdbResult.Success -> connectWebSocket()
+                    is AdbResult.Success -> connectBridge()
                 }
             }
             when (result) {
-                is BridgeWebSocketResult.Success -> finishConnected(result.value)
-                is BridgeWebSocketResult.Failure -> finishConnectionFailure(result)
+                is BridgeClientResult.Success -> finishConnected(result.value)
+                is BridgeClientResult.Failure -> finishConnectionFailure(result)
             }
         } catch (exception: Exception) {
             finishError(exception.message ?: "Unexpected connection error.")
@@ -234,7 +234,7 @@ class BridgeConnectionCoordinator(
         }
 
         if (disposed) return
-        val client = activeWebSocketClient
+        val client = activeBridgeClient
         val expectedVersion = snapshot.version
         if (client == null || expectedVersion == null) {
             finishClearFailure()
@@ -242,8 +242,8 @@ class BridgeConnectionCoordinator(
         }
 
         when (val result = runCatching { client.clearText(expectedVersion) }
-            .getOrElse { BridgeWebSocketResult.Failure("Clear request failed.", cause = it) }) {
-            is BridgeWebSocketResult.Success -> when (val clear = result.value) {
+            .getOrElse { BridgeClientResult.Failure("Clear request failed.", cause = it) }) {
+            is BridgeClientResult.Success -> when (val clear = result.value) {
                 is BridgeClearResult.Cleared -> finish(
                     state.copy(
                         text = "",
@@ -255,14 +255,14 @@ class BridgeConnectionCoordinator(
                 )
                 is BridgeClearResult.VersionConflict -> refreshAfterConflict(client)
             }
-            is BridgeWebSocketResult.Failure -> finishClearFailure()
+            is BridgeClientResult.Failure -> finishClearFailure()
         }
     }
 
-    private fun refreshAfterConflict(client: BridgeWebSocketClient) {
+    private fun refreshAfterConflict(client: BridgeClient) {
         if (disposed) return
         when (val result = client.getSnapshot()) {
-            is BridgeWebSocketResult.Success -> finish(
+            is BridgeClientResult.Success -> finish(
                 state.copy(
                     text = result.value.text,
                     version = result.value.version,
@@ -271,7 +271,7 @@ class BridgeConnectionCoordinator(
                     feedbackMessage = VERSION_CONFLICT_MESSAGE,
                 ),
             )
-            is BridgeWebSocketResult.Failure -> finishClearFailure()
+            is BridgeClientResult.Failure -> finishClearFailure()
         }
     }
 
@@ -284,42 +284,42 @@ class BridgeConnectionCoordinator(
         OperationStart(snapshot, StateNotification(newState, publishLocked(newState)))
     }
 
-    private fun connectWebSocket(): BridgeWebSocketResult<TextSnapshot> {
-        val client = webSocketClientFactory()
+    private fun connectBridge(): BridgeClientResult<TextSnapshot> {
+        val client = bridgeClientFactory()
         val installed = synchronized(lock) {
             if (disposed) false else {
-                activeWebSocketClient = client
+                activeBridgeClient = client
                 true
             }
         }
         if (!installed) {
             client.close()
-            return BridgeWebSocketResult.Failure("Project has been disposed.", "DISPOSED")
+            return BridgeClientResult.Failure("Project has been disposed.", "DISPOSED")
         }
 
-        val result = client.connect(object : BridgeWebSocketEventListener {
+        val result = client.connect(object : BridgeClientEventListener {
             override fun onTextChanged(message: TextChanged) {
                 submit { handleTextChanged(client, message) }
             }
 
             override fun onClosed(cause: Throwable?) {
-                submit { handleWebSocketClosed(client, cause) }
+                submit { handleBridgeClosed(client, cause) }
             }
 
             override fun onError(cause: Throwable) {
-                submit { handleWebSocketError(client, cause) }
+                submit { handleBridgeError(client, cause) }
             }
         })
-        if (result is BridgeWebSocketResult.Failure) {
-            detachWebSocket(client)
-            closeWebSocketAsync(client)
+        if (result is BridgeClientResult.Failure) {
+            detachBridge(client)
+            closeBridgeAsync(client)
         }
         return result
     }
 
-    private fun handleTextChanged(client: BridgeWebSocketClient, message: TextChanged) {
+    private fun handleTextChanged(client: BridgeClient, message: TextChanged) {
         val notification = synchronized(lock) {
-            if (disposed || activeWebSocketClient !== client) return
+            if (disposed || activeBridgeClient !== client) return
             if (state.text == message.text && state.version == message.version) return
             val newState = state.copy(
                 connectionState = BridgeConnectionState.CONNECTED,
@@ -336,31 +336,31 @@ class BridgeConnectionCoordinator(
         notifyListeners(notification)
     }
 
-    private fun handleWebSocketClosed(client: BridgeWebSocketClient, cause: Throwable?) {
-        if (!detachWebSocket(client)) return
+    private fun handleBridgeClosed(client: BridgeClient, cause: Throwable?) {
+        if (!detachBridge(client)) return
         finish(
             state.copy(
                 connectionState = BridgeConnectionState.SERVER_OFFLINE,
                 serverStatus = "Offline",
-                errorMessage = cause?.message ?: "WebSocket connection closed.",
+                errorMessage = cause?.message ?: "TCP connection closed.",
                 feedbackMessage = null,
             ),
         )
-        closeWebSocketAsync(client)
+        closeBridgeAsync(client)
     }
 
-    private fun handleWebSocketError(client: BridgeWebSocketClient, cause: Throwable) {
-        if (!detachWebSocket(client)) return
-        BridgeLog.failure("WebSocket connection", cause)
+    private fun handleBridgeError(client: BridgeClient, cause: Throwable) {
+        if (!detachBridge(client)) return
+        BridgeLog.failure("TCP connection", cause)
         finish(
             state.copy(
                 connectionState = BridgeConnectionState.ERROR,
                 serverStatus = "Offline",
-                errorMessage = "WebSocket connection failed.",
+                errorMessage = "TCP connection failed.",
                 feedbackMessage = null,
             ),
         )
-        closeWebSocketAsync(client)
+        closeBridgeAsync(client)
     }
 
     private fun finishConnected(snapshot: TextSnapshot) {
@@ -382,8 +382,8 @@ class BridgeConnectionCoordinator(
         )
     }
 
-    private fun finishConnectionFailure(result: BridgeWebSocketResult.Failure) {
-        if (result.code == "WEBSOCKET_CONNECTION_FAILED" || result.code == "WEBSOCKET_CLOSED") {
+    private fun finishConnectionFailure(result: BridgeClientResult.Failure) {
+        if (result.code == "TCP_CONNECTION_FAILED" || result.code == "TCP_CLOSED") {
             finish(
                 state.copy(
                     connectionState = BridgeConnectionState.SERVER_OFFLINE,
@@ -420,19 +420,19 @@ class BridgeConnectionCoordinator(
         notifyListeners(notification)
     }
 
-    private fun detachWebSocket(client: BridgeWebSocketClient): Boolean = synchronized(lock) {
-        if (activeWebSocketClient !== client) return@synchronized false
-        activeWebSocketClient = null
+    private fun detachBridge(client: BridgeClient): Boolean = synchronized(lock) {
+        if (activeBridgeClient !== client) return@synchronized false
+        activeBridgeClient = null
         true
     }
 
-    private fun closeActiveWebSocket() {
+    private fun closeActiveBridge() {
         val client = synchronized(lock) {
-            val current = activeWebSocketClient
-            activeWebSocketClient = null
+            val current = activeBridgeClient
+            activeBridgeClient = null
             current
         }
-        client?.let(::closeWebSocketAsync)
+        client?.let(::closeBridgeAsync)
     }
 
     private fun publish(newState: BridgeState) {
@@ -460,16 +460,16 @@ class BridgeConnectionCoordinator(
         }
     }
 
-    private fun closeWebSocketAsync(client: BridgeWebSocketClient) {
+    private fun closeBridgeAsync(client: BridgeClient) {
         val closeTask = Runnable {
             runCatching { client.close() }
-                .onFailure { BridgeLog.failure("WebSocket client close", it) }
+                .onFailure { BridgeLog.failure("TCP client close", it) }
         }
         try {
             executor.execute(closeTask)
         } catch (exception: RuntimeException) {
-            BridgeLog.failure("WebSocket client close scheduling", exception)
-            Thread(closeTask, "input-bridge-websocket-close").apply {
+            BridgeLog.failure("TCP client close scheduling", exception)
+            Thread(closeTask, "input-bridge-tcp-close").apply {
                 isDaemon = true
                 start()
             }

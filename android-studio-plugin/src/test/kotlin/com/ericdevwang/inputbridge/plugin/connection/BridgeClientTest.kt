@@ -1,5 +1,8 @@
 package com.ericdevwang.inputbridge.plugin.connection
 
+import com.ericdevwang.inputbridge.core.connection.client.ClientConnection
+import com.ericdevwang.inputbridge.core.connection.client.ClientConnectionFactory
+import com.ericdevwang.inputbridge.core.connection.client.ClientConnectionListener
 import com.ericdevwang.inputbridge.protocol.BridgeMessage
 import com.ericdevwang.inputbridge.protocol.ClearCommand
 import com.ericdevwang.inputbridge.protocol.ClearSucceeded
@@ -14,10 +17,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class BridgeWebSocketClientTest {
+class BridgeClientTest {
     @Test
     fun connectSendsHelloAndReturnsInitialSnapshot() {
-        val transport = RecordingWebSocketTransport()
+        val transport = RecordingConnectionFactory()
         transport.onSend = { message, session ->
             if (message is HelloCommand) {
                 session.emit(
@@ -32,16 +35,16 @@ class BridgeWebSocketClientTest {
                 session.emit(TextSnapshot("你好\n😀", 7L, 99L))
             }
         }
-        val client = JdkBridgeWebSocketClient(
-            transport = transport,
+        val client = JdkBridgeClient(
+            connectionClient = transport,
             requestTimeout = Duration.ofMillis(100),
             requestIdFactory = RequestIds(),
         )
 
-        val result = client.connect(object : BridgeWebSocketEventListener {})
+        val result = client.connect(object : BridgeClientEventListener {})
 
         assertEquals(
-            BridgeWebSocketResult.Success(TextSnapshot("你好\n😀", 7L, 99L)),
+            BridgeClientResult.Success(TextSnapshot("你好\n😀", 7L, 99L)),
             result,
         )
         assertTrue(transport.sentMessages.first() is HelloCommand)
@@ -49,8 +52,8 @@ class BridgeWebSocketClientTest {
 
     @Test
     fun pushedTextChangedIsDeliveredToListener() {
-        val transport = RecordingWebSocketTransport()
-        val listener = RecordingWebSocketEventListener()
+        val transport = RecordingConnectionFactory()
+        val listener = RecordingClientEventListener()
         val client = connectedClient(transport, listener)
 
         transport.session.emit(TextChanged("updated", 8L, 101L))
@@ -61,8 +64,8 @@ class BridgeWebSocketClientTest {
 
     @Test
     fun snapshotResponseMustMatchItsRequestId() {
-        val transport = RecordingWebSocketTransport()
-        val client = connectedClient(transport, RecordingWebSocketEventListener())
+        val transport = RecordingConnectionFactory()
+        val client = connectedClient(transport, RecordingClientEventListener())
         transport.onSend = { message, session ->
             if (message is com.ericdevwang.inputbridge.protocol.GetSnapshotCommand) {
                 session.emit(TextSnapshot("updated", 8L, 101L, requestId = message.requestId))
@@ -70,28 +73,28 @@ class BridgeWebSocketClientTest {
         }
 
         assertEquals(
-            BridgeWebSocketResult.Success(TextSnapshot("updated", 8L, 101L, requestId = "request-1")),
+            BridgeClientResult.Success(TextSnapshot("updated", 8L, 101L, requestId = "request-1")),
             client.getSnapshot(),
         )
     }
 
     @Test
     fun mismatchedSnapshotResponseFailsWithInvalidResponse() {
-        val transport = RecordingWebSocketTransport()
-        val client = connectedClient(transport, RecordingWebSocketEventListener())
+        val transport = RecordingConnectionFactory()
+        val client = connectedClient(transport, RecordingClientEventListener())
         transport.onSend = { message, session ->
             if (message is com.ericdevwang.inputbridge.protocol.GetSnapshotCommand) {
                 session.emit(TextSnapshot("updated", 8L, 101L, requestId = "wrong-request"))
             }
         }
 
-        assertEquals("INVALID_RESPONSE", (client.getSnapshot() as BridgeWebSocketResult.Failure).code)
+        assertEquals("INVALID_RESPONSE", (client.getSnapshot() as BridgeClientResult.Failure).code)
     }
 
     @Test
-    fun transportLifecycleEventsAreForwardedToListener() {
-        val transport = RecordingWebSocketTransport()
-        val listener = RecordingWebSocketEventListener()
+    fun connectionLifecycleEventsAreForwardedToListener() {
+        val transport = RecordingConnectionFactory()
+        val listener = RecordingClientEventListener()
         val client = connectedClient(transport, listener)
         val closeCause = IllegalStateException("closed")
         val errorCause = IllegalStateException("failed")
@@ -105,37 +108,36 @@ class BridgeWebSocketClientTest {
     }
 
     @Test
-    fun closeClosesSessionAndTransport() {
-        val transport = RecordingWebSocketTransport()
-        val client = connectedClient(transport, RecordingWebSocketEventListener())
+    fun closeClosesConnection() {
+        val transport = RecordingConnectionFactory()
+        val client = connectedClient(transport, RecordingClientEventListener())
 
         client.close()
 
         assertEquals(1, transport.session.closeCalls)
-        assertEquals(1, transport.closeCalls)
     }
 
     @Test
     fun clearReturnsVersionConflictWithoutTreatingItAsTransportFailure() {
-        val transport = RecordingWebSocketTransport()
+        val transport = RecordingConnectionFactory()
         transport.onSend = { message, session ->
             if (message is ClearCommand) {
                 session.emit(VersionConflict(currentVersion = 8L, requestId = message.requestId))
             }
         }
-        val client = connectedClient(transport, RecordingWebSocketEventListener())
+        val client = connectedClient(transport, RecordingClientEventListener())
 
         val result = client.clearText(expectedVersion = 7L)
 
         assertEquals(
-            BridgeWebSocketResult.Success(BridgeClearResult.VersionConflict(currentVersion = 8L)),
+            BridgeClientResult.Success(BridgeClearResult.VersionConflict(currentVersion = 8L)),
             result,
         )
     }
 
     @Test
     fun clearSuccessPreservesResponseVersions() {
-        val transport = RecordingWebSocketTransport()
+        val transport = RecordingConnectionFactory()
         transport.onSend = { message, session ->
             if (message is ClearCommand) {
                 session.emit(
@@ -147,10 +149,10 @@ class BridgeWebSocketClientTest {
                 )
             }
         }
-        val client = connectedClient(transport, RecordingWebSocketEventListener())
+        val client = connectedClient(transport, RecordingClientEventListener())
 
         assertEquals(
-            BridgeWebSocketResult.Success(
+            BridgeClientResult.Success(
                 BridgeClearResult.Cleared(clearedVersion = 7L, newVersion = 8L),
             ),
             client.clearText(expectedVersion = 7L),
@@ -159,7 +161,7 @@ class BridgeWebSocketClientTest {
 
     @Test
     fun connectRejectsUnsupportedProtocolVersion() {
-        val transport = RecordingWebSocketTransport()
+        val transport = RecordingConnectionFactory()
         transport.onSend = { message, session ->
             if (message is HelloCommand) {
                 session.emit(
@@ -173,42 +175,42 @@ class BridgeWebSocketClientTest {
                 )
             }
         }
-        val result = JdkBridgeWebSocketClient(
-            transport = transport,
+        val result = JdkBridgeClient(
+            connectionClient = transport,
             requestTimeout = Duration.ofMillis(100),
             requestIdFactory = RequestIds(),
-        ).connect(object : BridgeWebSocketEventListener {})
+        ).connect(object : BridgeClientEventListener {})
 
-        assertEquals("UNSUPPORTED_PROTOCOL_VERSION", (result as BridgeWebSocketResult.Failure).code)
+        assertEquals("UNSUPPORTED_PROTOCOL_VERSION", (result as BridgeClientResult.Failure).code)
     }
 
     @Test
     fun requestTimeoutReturnsBoundedFailure() {
-        val transport = RecordingWebSocketTransport()
-        val result = JdkBridgeWebSocketClient(
-            transport = transport,
+        val transport = RecordingConnectionFactory()
+        val result = JdkBridgeClient(
+            connectionClient = transport,
             requestTimeout = Duration.ofMillis(20),
             requestIdFactory = RequestIds(),
-        ).connect(object : BridgeWebSocketEventListener {})
+        ).connect(object : BridgeClientEventListener {})
 
-        assertEquals("REQUEST_TIMEOUT", (result as BridgeWebSocketResult.Failure).code)
+        assertEquals("REQUEST_TIMEOUT", (result as BridgeClientResult.Failure).code)
     }
 
     @Test
     fun clearRejectsNegativeExpectedVersionBeforeSending() {
-        val transport = RecordingWebSocketTransport()
-        val client = JdkBridgeWebSocketClient(transport = transport)
+        val transport = RecordingConnectionFactory()
+        val client = JdkBridgeClient(connectionClient = transport)
 
         val result = client.clearText(expectedVersion = -1L)
 
-        assertEquals("INVALID_EXPECTED_VERSION", (result as BridgeWebSocketResult.Failure).code)
+        assertEquals("INVALID_EXPECTED_VERSION", (result as BridgeClientResult.Failure).code)
         assertTrue(transport.sentMessages.isEmpty())
     }
 
     private fun connectedClient(
-        transport: RecordingWebSocketTransport,
-        listener: RecordingWebSocketEventListener,
-    ): JdkBridgeWebSocketClient {
+        transport: RecordingConnectionFactory,
+        listener: RecordingClientEventListener,
+    ): JdkBridgeClient {
         val existingOnSend = transport.onSend
         transport.onSend = { message, session ->
             if (message is HelloCommand) {
@@ -226,13 +228,13 @@ class BridgeWebSocketClientTest {
                 existingOnSend?.invoke(message, session)
             }
         }
-        val client = JdkBridgeWebSocketClient(
-            transport = transport,
+        val client = JdkBridgeClient(
+            connectionClient = transport,
             requestTimeout = Duration.ofMillis(100),
             requestIdFactory = RequestIds(),
         )
         assertEquals(
-            BridgeWebSocketResult.Success(TextSnapshot("initial", 7L, 99L)),
+            BridgeClientResult.Success(TextSnapshot("initial", 7L, 99L)),
             client.connect(listener),
         )
         return client
@@ -245,7 +247,7 @@ private class RequestIds : () -> String {
     override fun invoke(): String = "request-${next++}"
 }
 
-private class RecordingWebSocketEventListener : BridgeWebSocketEventListener {
+private class RecordingClientEventListener : BridgeClientEventListener {
     val textChanges = mutableListOf<TextChanged>()
     val closedCauses = mutableListOf<Throwable?>()
     val errors = mutableListOf<Throwable>()
@@ -263,30 +265,25 @@ private class RecordingWebSocketEventListener : BridgeWebSocketEventListener {
     }
 }
 
-private class RecordingWebSocketTransport : BridgeWebSocketTransport {
-    val session = RecordingWebSocketSession()
-    var onSend: ((BridgeMessage, RecordingWebSocketSession) -> Unit)? = null
-    var closeCalls = 0
+private class RecordingConnectionFactory : ClientConnectionFactory {
+    val session = RecordingConnection()
+    var onSend: ((BridgeMessage, RecordingConnection) -> Unit)? = null
 
     val sentMessages: List<BridgeMessage>
         get() = session.sentMessages
 
-    override fun connect(listener: BridgeWebSocketTransportListener): BridgeWebSocketTransportResult {
+    override fun connect(listener: ClientConnectionListener): ClientConnection {
         session.listener = listener
         session.onSend = { message, currentSession -> onSend?.invoke(message, currentSession) }
-        return BridgeWebSocketTransportResult.Connected(session)
-    }
-
-    override fun close() {
-        closeCalls++
+        return session
     }
 }
 
-private class RecordingWebSocketSession : BridgeWebSocketSession {
-    var listener: BridgeWebSocketTransportListener? = null
+private class RecordingConnection : ClientConnection {
+    var listener: ClientConnectionListener? = null
     val sentMessages = mutableListOf<BridgeMessage>()
     var closeCalls = 0
-    var onSend: ((BridgeMessage, RecordingWebSocketSession) -> Unit)? = null
+    var onSend: ((BridgeMessage, RecordingConnection) -> Unit)? = null
 
     override fun send(message: BridgeMessage): Boolean {
         sentMessages += message

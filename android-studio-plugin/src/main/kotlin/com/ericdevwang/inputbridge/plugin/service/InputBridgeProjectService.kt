@@ -6,8 +6,7 @@ import com.ericdevwang.inputbridge.plugin.adb.RandomDeviceSelector
 import com.ericdevwang.inputbridge.plugin.clipboard.IntellijClipboardWriter
 import com.ericdevwang.inputbridge.plugin.connection.BridgeConnectionController
 import com.ericdevwang.inputbridge.plugin.connection.BridgeConnectionCoordinator
-import com.ericdevwang.inputbridge.plugin.connection.JdkBridgeWebSocketClient
-import com.ericdevwang.inputbridge.plugin.connection.JdkWebSocketTransport
+import com.ericdevwang.inputbridge.plugin.connection.JdkBridgeClient
 import com.ericdevwang.inputbridge.plugin.notifications.InputBridgeNotifier
 import com.ericdevwang.inputbridge.plugin.notifications.IntelliJInputBridgeNotifier
 import com.intellij.openapi.Disposable
@@ -22,7 +21,7 @@ class InputBridgeProjectService(
     val connectionController: BridgeConnectionController = BridgeConnectionCoordinator(
         adbLocator = AdbLocator.forProject(project),
         adbClientFactory = { adbPath -> ProcessAdbClient(adbPath) },
-        webSocketClientFactory = { JdkBridgeWebSocketClient(JdkWebSocketTransport.create()) },
+        bridgeClientFactory = { JdkBridgeClient.create() },
         deviceSelector = RandomDeviceSelector(),
         executor = AppExecutorUtil.getAppExecutorService(),
         clipboardWriter = IntellijClipboardWriter(),

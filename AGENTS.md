@@ -2,8 +2,8 @@
 
 ## Current Repository Snapshot
 
-- Wire protocol version: `2`.
-- Runtime flow: `app` owns `MainActivity`/`MainScreen`, `TextRepository`, and the foreground `InputBridgeService`/`InputWebSocketServer`; `android-studio-plugin` owns `InputBridgeToolWindowFactory`, `InputBridgePanel`, `BridgeConnectionCoordinator`, ADB, and the WebSocket client.
+- Wire protocol version: `3`.
+- Runtime flow: `app` owns `MainActivity`/`MainScreen`, `TextRepository`, and the foreground `InputBridgeService`/`InputBridgeServer`; `android-studio-plugin` owns `InputBridgeToolWindowFactory`, `InputBridgePanel`, `BridgeConnectionCoordinator`, ADB, and the TCP client.
 - `protocol` owns `ProtocolModels.kt`, `ProtocolConstants.kt`, and serialization configuration shared by both products.
 - The default plugin target is IntelliJ IDEA `2026.1.1` with Android plugin `261.23567.138`; use Java 21 and the checked-in Gradle wrapper.
 
@@ -12,7 +12,7 @@
 This repository uses one root Gradle project with two product modules and one shared module:
 
 - `app/`: Kotlin Android application, with production code under `app/src/main`, unit tests under `app/src/test`, and Android resources under `app/src/main/res`.
-- `protocol/`: plain Kotlin/JVM WebSocket protocol module, with shared wire models under `protocol/src/main/kotlin` and serialization tests under `protocol/src/test/kotlin`.
+- `protocol/`: plain Kotlin/JVM TCP protocol module, with shared wire models under `protocol/src/main/kotlin` and serialization tests under `protocol/src/test/kotlin`.
 - `android-studio-plugin/`: Kotlin IntelliJ Platform plugin module targeting Android Studio and IntelliJ IDEA, with code under `src/main/kotlin`, tests under `src/test/kotlin`, and plugin metadata under `src/main/resources/META-INF`.
 - `docs/`: requirements, commit conventions, and implementation notes.
 - `.github/workflows/`: pull request/main CI and push-tag release workflow using `bridgeVersion` for artifacts.
@@ -26,7 +26,7 @@ Keep the Android App and plugin independently buildable within the same root Gra
 Use the documents in this order when information differs:
 
 1. Source code and tests: actual implementation behavior.
-2. `docs/websocket-protocol.md`: cross-module wire compatibility.
+2. `docs/tcp-protocol.md`: cross-module wire compatibility.
 3. `docs/requirements.md`: product constraints and acceptance scope.
 4. `README.md`: onboarding and user-facing overview.
 5. `AGENTS.md`: contribution workflow and AI-specific guardrails.
@@ -57,17 +57,17 @@ Run commands from the repository root:
 ./gradlew :android-studio-plugin:verifyPlugin
 ```
 
-Use `adb forward tcp:18080 tcp:18080` for manual end-to-end checks. WebSocket and ADB operations must run off the IntelliJ EDT and use bounded timeouts.
+Use `adb forward tcp:18080 tcp:18080` for manual end-to-end checks. TCP and ADB operations must run off the IntelliJ EDT and use bounded timeouts.
 
 Plugin tasks default to IntelliJ IDEA 2026.1.1 with Android plugin `261.23567.138`.
 
 ## Coding Style & Naming Conventions
 
-Use Kotlin official style with four-space indentation. Use `PascalCase` for classes and composables, `camelCase` for functions and properties, and `UPPER_SNAKE_CASE` only for constants. Keep files focused by responsibility and prefer explicit interfaces between storage, server, ADB, WebSocket, clipboard, and UI layers. Follow Compose conventions in the Android App and IntelliJ/Swing threading rules in the plugin.
+Use Kotlin official style with four-space indentation. Use `PascalCase` for classes and composables, `camelCase` for functions and properties, and `UPPER_SNAKE_CASE` only for constants. Keep files focused by responsibility and prefer explicit interfaces between storage, server, ADB, TCP, clipboard, and UI layers. Follow Compose conventions in the Android App and IntelliJ/Swing threading rules in the plugin.
 
 ## Testing Guidelines
 
-Test version changes, persistence, UTF-8/multiline text, WebSocket messages, handshake failures, ADB parsing, version conflicts, clipboard failure handling, and Copy-before-Clear ordering. Name tests after observable behavior, such as `clearWithStaleVersionReturnsConflict`. Add or update tests with every behavior change; no global coverage threshold is defined yet.
+Test version changes, persistence, UTF-8/multiline text, TCP messages, handshake failures, ADB parsing, version conflicts, clipboard failure handling, and Copy-before-Clear ordering. Name tests after observable behavior, such as `clearWithStaleVersionReturnsConflict`. Add or update tests with every behavior change; no global coverage threshold is defined yet.
 
 Before a PR, run the full matrix: Android lint and unit tests, Protocol tests, Plugin tests, `buildPlugin`, and `verifyPlugin`.
 
@@ -79,4 +79,4 @@ Keep commits focused. Pull requests should describe scope and validation command
 
 ## Architecture Constraints
 
-The Android server listens only on `127.0.0.1:18080` and exposes the versioned WebSocket endpoint `/api/v1/ws`. The plugin communicates through ADB forwarding and a persistent WebSocket session. WebSocket connection and command timeouts are 1 second and 2 seconds; ADB commands use a 5-second timeout. Do not add settings persistence, global hotkeys, simulated input, automatic paste, or system clipboard reads.
+The Android server listens only on `127.0.0.1:18080` and exposes the versioned TCP protocol described in `docs/tcp-protocol.md`; it has no HTTP path. The plugin communicates through ADB forwarding and a persistent TCP session. TCP connect timeout is 2 seconds and command timeout is 4 seconds; ADB commands use a 5-second timeout. Do not add settings persistence, global hotkeys, simulated input, automatic paste, or system clipboard reads.

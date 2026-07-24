@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import com.ericdevwang.inputbridge.server.DEFAULT_SERVER_HOST
 import com.ericdevwang.inputbridge.server.DEFAULT_SERVER_PORT
-import com.ericdevwang.inputbridge.server.InputWebSocketServer
+import com.ericdevwang.inputbridge.server.InputBridgeServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
 class InputBridgeService : Service() {
-    private val webSocketServer: InputWebSocketServer by inject()
+    private val bridgeServer: InputBridgeServer by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var startupJob: Job? = null
 
@@ -51,7 +51,7 @@ class InputBridgeService : Service() {
         startupJob?.cancel()
         serviceScope.launch {
             try {
-                webSocketServer.stop()
+                bridgeServer.stop()
             } finally {
                 serviceScope.cancel()
             }
@@ -63,14 +63,14 @@ class InputBridgeService : Service() {
 
     private suspend fun startServerWithRetries() {
         val started = ServerStartupRetry(
-            start = webSocketServer::start,
+            start = bridgeServer::start,
             wait = { millis -> delay(millis) },
             onFailure = { attempt, error ->
-                Log.e(TAG, "WebSocket server start failed, attempt=$attempt", error)
+                Log.e(TAG, "TCP server start failed, attempt=$attempt", error)
             },
         ).run()
         if (started) {
-            Log.i(TAG, "WebSocket server started on $DEFAULT_SERVER_HOST:$DEFAULT_SERVER_PORT")
+            Log.i(TAG, "TCP server started on $DEFAULT_SERVER_HOST:$DEFAULT_SERVER_PORT")
         }
     }
 
