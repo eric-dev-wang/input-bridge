@@ -128,6 +128,7 @@ private class TcpServerConnection(
 ) : ServerConnection {
     private val closed = AtomicBoolean(false)
     private val closeAfterWriteQueued = AtomicBoolean(false)
+    private val lifecycleLock = Any()
     private data class OutgoingFrame(val payload: ByteArray, val closeAfterWrite: Boolean)
 
     private val outgoing = LinkedBlockingQueue<OutgoingFrame>()
@@ -140,11 +141,16 @@ private class TcpServerConnection(
     private var lastPongAt = System.currentTimeMillis()
     @Volatile
     private var latestPingId: String? = null
+    @Volatile
+    private var writerThread: Thread? = null
 
     fun start() {
-        Thread(::writeLoop, "input-bridge-tcp-server-writer").apply {
-            isDaemon = true
-            start()
+        synchronized(lifecycleLock) {
+            if (closed.get()) return
+            writerThread = Thread(::writeLoop, "input-bridge-tcp-server-writer").apply {
+                isDaemon = true
+                start()
+            }
         }
         Thread(::readLoop, "input-bridge-tcp-server-reader").apply {
             isDaemon = true
@@ -247,6 +253,9 @@ private class TcpServerConnection(
 
     private fun closeInternal(cause: Throwable?) {
         if (!closed.compareAndSet(false, true)) return
+        synchronized(lifecycleLock) {
+            writerThread?.interrupt()
+        }
         heartbeatExecutor.shutdownNow()
         runCatching { socket.close() }
         applicationListener?.onClosed(cause)

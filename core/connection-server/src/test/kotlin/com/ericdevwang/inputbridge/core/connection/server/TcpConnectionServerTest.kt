@@ -9,6 +9,7 @@ import com.ericdevwang.inputbridge.protocol.ProtocolJson
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertEquals
@@ -19,6 +20,8 @@ class TcpConnectionServerTest {
     @Test
     fun sendsPingAndAcceptsMatchingPong() {
         val port = ServerSocket(0).use { it.localPort }
+        val writerThreadName = "input-bridge-tcp-server-writer"
+        val baseline = liveThreadCount(writerThreadName)
         val server = TcpConnectionServer(
             TcpConnectionServerConfig(
                 port = port,
@@ -39,8 +42,20 @@ class TcpConnectionServerTest {
             writer.writeMessage(Pong(ping.requestId))
             assertTrue(socket.isConnected)
         }
+        awaitThreadCountAtMost(writerThreadName, baseline)
         server.stop()
     }
+}
+
+private fun liveThreadCount(name: String): Int =
+    Thread.getAllStackTraces().keys.count { it.name == name && it.isAlive }
+
+private fun awaitThreadCountAtMost(name: String, expectedMaximum: Int) {
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+    while (System.nanoTime() < deadline && liveThreadCount(name) > expectedMaximum) {
+        Thread.sleep(10)
+    }
+    assertTrue(liveThreadCount(name) <= expectedMaximum)
 }
 
 private fun LengthPrefixedFrameWriter.writeMessage(message: BridgeMessage) {

@@ -61,14 +61,20 @@ private class TcpClientConnection(
     private val listener: ClientConnectionListener,
 ) : ClientConnection {
     private val closed = AtomicBoolean(false)
+    private val lifecycleLock = Any()
     private val outgoing = LinkedBlockingQueue<ByteArray>()
     private val reader = LengthPrefixedFrameReader(socket.getInputStream())
     private val writer = LengthPrefixedFrameWriter(socket.getOutputStream())
+    @Volatile
+    private var writerThread: Thread? = null
 
     fun start() {
-        Thread(::writeLoop, "input-bridge-tcp-client-writer").apply {
-            isDaemon = true
-            start()
+        synchronized(lifecycleLock) {
+            if (closed.get()) return
+            writerThread = Thread(::writeLoop, "input-bridge-tcp-client-writer").apply {
+                isDaemon = true
+                start()
+            }
         }
         Thread(::readLoop, "input-bridge-tcp-client-reader").apply {
             isDaemon = true
@@ -127,6 +133,9 @@ private class TcpClientConnection(
 
     private fun closeInternal(cause: Throwable?) {
         if (!closed.compareAndSet(false, true)) return
+        synchronized(lifecycleLock) {
+            writerThread?.interrupt()
+        }
         runCatching { socket.close() }
         listener.onClosed(cause)
     }
