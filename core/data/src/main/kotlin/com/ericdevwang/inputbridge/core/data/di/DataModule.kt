@@ -1,6 +1,6 @@
 package com.ericdevwang.inputbridge.core.data.di
 
-import com.ericdevwang.inputbridge.core.data.repository.DefaultTextRepository
+import com.ericdevwang.inputbridge.core.data.internal.repository.DefaultTextRepository
 import com.ericdevwang.inputbridge.core.data.repository.TextRepository
 import com.ericdevwang.inputbridge.core.datastore.di.datastoreModule
 import kotlinx.coroutines.CoroutineScope

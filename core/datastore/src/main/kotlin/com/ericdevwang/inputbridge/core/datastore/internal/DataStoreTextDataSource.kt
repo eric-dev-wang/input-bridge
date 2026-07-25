@@ -1,5 +1,7 @@
-package com.ericdevwang.inputbridge.core.datastore
+package com.ericdevwang.inputbridge.core.datastore.internal
 
+import com.ericdevwang.inputbridge.core.datastore.PersistedTextState
+import com.ericdevwang.inputbridge.core.datastore.TextDataSource
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences

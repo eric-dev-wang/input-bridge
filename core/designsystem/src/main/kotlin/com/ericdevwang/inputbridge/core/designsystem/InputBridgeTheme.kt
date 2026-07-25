@@ -8,6 +8,13 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.ericdevwang.inputbridge.core.designsystem.internal.Pink40
+import com.ericdevwang.inputbridge.core.designsystem.internal.Pink80
+import com.ericdevwang.inputbridge.core.designsystem.internal.Purple40
+import com.ericdevwang.inputbridge.core.designsystem.internal.Purple80
+import com.ericdevwang.inputbridge.core.designsystem.internal.PurpleGrey40
+import com.ericdevwang.inputbridge.core.designsystem.internal.PurpleGrey80
+import com.ericdevwang.inputbridge.core.designsystem.internal.Typography
 
 private val DarkColorScheme = darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
 

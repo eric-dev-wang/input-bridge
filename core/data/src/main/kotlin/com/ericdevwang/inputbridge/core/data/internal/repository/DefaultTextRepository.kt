@@ -1,6 +1,9 @@
-package com.ericdevwang.inputbridge.core.data.repository
+package com.ericdevwang.inputbridge.core.data.internal.repository
 
 import com.ericdevwang.inputbridge.core.data.model.TextState
+import com.ericdevwang.inputbridge.core.data.repository.ClearResult
+import com.ericdevwang.inputbridge.core.data.repository.PersistenceResult
+import com.ericdevwang.inputbridge.core.data.repository.TextRepository
 import com.ericdevwang.inputbridge.core.datastore.PersistedTextState
 import com.ericdevwang.inputbridge.core.datastore.TextDataSource
 import kotlinx.coroutines.CancellationException
@@ -19,34 +22,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class DefaultTextRepository(
+internal class DefaultTextRepository(
     private val dataSource: TextDataSource,
     scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : TextRepository {
-    private sealed interface WriteRequest {
-        val result: CompletableDeferred<*>
-    }
-
-    private class SaveRequest(
-        val state: TextState,
-        override val result: CompletableDeferred<PersistenceResult>,
-    ) : WriteRequest
-
-    private class ClearRequest(
-        val expectedVersion: Long,
-        override val result: CompletableDeferred<ClearResult>,
-    ) : WriteRequest
-
-    private sealed interface ClearDecision {
-        data class Persist(
-            val state: TextState,
-            val clearedVersion: Long,
-        ) : ClearDecision
-
-        data class Conflict(val currentVersion: Long) : ClearDecision
-    }
-
     private val requests = ArrayDeque<WriteRequest>()
     private val requestsMutex = Mutex()
     private val requestSignal = Channel<Unit>(capacity = Channel.CONFLATED)
