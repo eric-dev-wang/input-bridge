@@ -56,8 +56,8 @@ tasks.named("processResources") {
 }
 
 dependencies {
-    implementation(project(":protocol"))
-    implementation(project(":core:connection-client"))
+    implementation(projects.protocol)
+    implementation(projects.core.connectionClient)
 
     intellijPlatform {
         if (localAndroidStudioPath.isPresent) {

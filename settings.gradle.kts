@@ -1,5 +1,7 @@
 import org.jetbrains.intellij.platform.gradle.extensions.intellijPlatform
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 pluginManagement {
     includeBuild("build-logic")
 
@@ -37,7 +39,7 @@ plugins {
     id("org.jetbrains.intellij.platform.settings") version "2.18.1"
 }
 
-rootProject.name = "Input Bridge"
+rootProject.name = "InputBridge"
 include(":app")
 include(":protocol")
 include(":android-studio-plugin")

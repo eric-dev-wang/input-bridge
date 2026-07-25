@@ -39,6 +39,11 @@ gradlePlugin {
             implementationClass =
                 "com.ericdevwang.inputbridge.buildlogic.KoinConventionPlugin"
         }
+        register("jvmLibrary") {
+            id = "com.ericdevwang.inputbridge.jvm.library"
+            implementationClass =
+                "com.ericdevwang.inputbridge.buildlogic.JvmLibraryConventionPlugin"
+        }
     }
 }
 
