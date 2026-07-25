@@ -2,24 +2,33 @@
 
 ## Current Repository Snapshot
 
-- Wire protocol version: `3`.
-- Runtime flow: `app` owns `MainActivity`/`MainScreen`, `TextRepository`, and the foreground `InputBridgeService`/`InputBridgeServer`; `android-studio-plugin` owns `InputBridgeToolWindowFactory`, `InputBridgePanel`, `BridgeConnectionCoordinator`, ADB, and the TCP client.
+- Business protocol version: `3`; transport protocol version: `1`.
+- Runtime flow: `app` owns `MainActivity`/`MainScreen`, the foreground `InputBridgeService`, and the app-specific `InputBridgeServer`; `core:data` owns `TextRepository`, `core:datastore` owns the DataStore implementation, and `core:designsystem` owns the Compose theme. `android-studio-plugin` owns `InputBridgeToolWindowFactory`, `InputBridgePanel`, `BridgeConnectionCoordinator`, ADB, and the TCP client.
 - `protocol` owns `ProtocolModels.kt`, `ProtocolConstants.kt`, and serialization configuration shared by both products.
+- `build-logic/convention` owns the shared Android, Kotlin/JVM, and Koin Convention Plugins.
 - The default plugin target is IntelliJ IDEA `2026.1.1` with Android plugin `261.23567.138`; use Java 21 and the checked-in Gradle wrapper.
 
 ## Project Structure & Module Organization
 
-This repository uses one root Gradle project with two product modules and one shared module:
+This repository uses one root Gradle project with two product modules, one shared protocol module, three Android core modules, and four pure Kotlin/JVM transport modules:
 
 - `app/`: Kotlin Android application, with production code under `app/src/main`, unit tests under `app/src/test`, and Android resources under `app/src/main/res`.
+- `core/datastore/`: Android library that hides AndroidX DataStore behind the `TextDataSource` API.
+- `core/data/`: Android library that owns `TextRepository` and depends on `core/datastore`.
+- `core/designsystem/`: Android Compose library that owns the shared `InputBridgeTheme`.
+- `core/framing/`: plain Kotlin/JVM length-prefixed framing module.
+- `core/crypto/`: plain Kotlin/JVM transport handshake and encryption module.
+- `core/connection-client/`: plain Kotlin/JVM TCP client connection module.
+- `core/connection-server/`: plain Kotlin/JVM TCP server connection module.
 - `protocol/`: plain Kotlin/JVM TCP protocol module, with shared wire models under `protocol/src/main/kotlin` and serialization tests under `protocol/src/test/kotlin`.
+- `build-logic/convention/`: included Gradle build that provides shared Convention Plugins.
 - `android-studio-plugin/`: Kotlin IntelliJ Platform plugin module targeting Android Studio and IntelliJ IDEA, with code under `src/main/kotlin`, tests under `src/test/kotlin`, and plugin metadata under `src/main/resources/META-INF`.
-- `docs/`: requirements, commit conventions, and implementation notes.
+- `docs/`: protocol and commit conventions.
 - `.github/workflows/`: pull request/main CI and push-tag release workflow using `bridgeVersion` for artifacts.
 - `.worktrees/`: local isolated Git worktrees used for feature implementation; its contents are not committed.
 - `CHANGELOG.md`: release history; entries describe the behavior of the corresponding version.
 
-Keep the Android App and plugin independently buildable within the same root Gradle project. Keep `protocol/` limited to versioned wire models and serialization contracts. Use `docs/requirements.md` for product constraints and acceptance scope.
+Keep the Android App and plugin independently buildable within the same root Gradle project. Keep `protocol/` limited to versioned wire models and serialization contracts. Keep DataStore implementation behind `core/datastore` and expose repository APIs through `core/data`.
 
 ## Documentation Authority
 
@@ -27,9 +36,8 @@ Use the documents in this order when information differs:
 
 1. Source code and tests: actual implementation behavior.
 2. `docs/tcp-protocol.md`: cross-module wire compatibility.
-3. `docs/requirements.md`: product constraints and acceptance scope.
-4. `README.md`: onboarding and user-facing overview.
-5. `AGENTS.md`: contribution workflow and AI-specific guardrails.
+3. `README.md`: onboarding and user-facing overview.
+4. `AGENTS.md`: contribution workflow and AI-specific guardrails.
 
 Planning history is not an automatic task queue; derive current work from the requested change, open issues, and the current codebase.
 
@@ -52,6 +60,8 @@ Run commands from the repository root:
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:lintDebug
 ./gradlew :protocol:test
+./gradlew :core:framing:test :core:crypto:test :core:connection-client:test :core:connection-server:test
+./gradlew :build-logic:convention:validatePlugins
 ./gradlew :android-studio-plugin:buildPlugin
 ./gradlew :android-studio-plugin:test
 ./gradlew :android-studio-plugin:verifyPlugin
@@ -69,7 +79,7 @@ Use Kotlin official style with four-space indentation. Use `PascalCase` for clas
 
 Test version changes, persistence, UTF-8/multiline text, TCP messages, handshake failures, ADB parsing, version conflicts, clipboard failure handling, and Copy-before-Clear ordering. Name tests after observable behavior, such as `clearWithStaleVersionReturnsConflict`. Add or update tests with every behavior change; no global coverage threshold is defined yet.
 
-Before a PR, run the full matrix: Android lint and unit tests, Protocol tests, Plugin tests, `buildPlugin`, and `verifyPlugin`.
+Before a PR, run the full matrix: Android lint and unit tests, core JVM tests, Protocol tests, Plugin tests, `buildPlugin`, and `verifyPlugin`.
 
 ## Commit & Pull Request Guidelines
 

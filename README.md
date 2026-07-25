@@ -2,14 +2,16 @@
 
 Input Bridge 是一个通过 USB ADB 将 Android 手机上的临时文本推送到 Android Studio / IntelliJ IDEA 插件的本地文本桥接工具。
 
-Android App 负责输入和保存当前文本；IntelliJ Platform Plugin 负责接收实时更新、展示文本并写入系统剪贴板。用户最后在目标程序中手动粘贴。
+Android App 负责输入当前文本；`core:data` 提供 Repository，`core:datastore` 负责 DataStore 持久化；IntelliJ Platform Plugin 负责接收实时更新、展示文本并写入系统剪贴板。用户最后在目标程序中手动粘贴。
 
-共享 TCP 协议版本为 `3`。
+业务 TCP 协议版本为 `3`，传输协议版本为 `1`。
 
 ## 当前架构
 
 ```text
-Android App TextRepository
+Android App UI
+        ↓
+core:data TextRepository ← core:datastore persistence
         ↓
 Foreground Service TCP Server
         ↓
@@ -28,15 +30,19 @@ Copy / Copy & Clear
 127.0.0.1:18080
 ```
 
-协议版本为 `3`，共享模型位于 `protocol/`。完整消息定义见
+业务协议版本为 `3`，共享模型位于 `protocol/`；加密传输协议版本为 `1`。完整消息定义见
 [`docs/tcp-protocol.md`](docs/tcp-protocol.md)。
 
 ## 项目结构
 
 ```text
 .
-├── app/                    # Android App、Repository、Service、TCP Server
+├── app/                    # Android App UI、Foreground Service、TCP Server
+├── build-logic/convention/ # Android、Kotlin/JVM、Koin Convention Plugins
 ├── protocol/               # 纯 Kotlin/JVM 共享协议模型
+├── core/datastore/         # Android DataStore 实现和 TextDataSource
+├── core/data/              # TextRepository 和数据层状态模型
+├── core/designsystem/      # Input Bridge Compose Theme
 ├── core/framing/           # 纯 Kotlin/JVM 长度前缀 framing
 ├── core/crypto/            # 纯 Kotlin/JVM 共享密钥握手和加密传输
 ├── core/connection-client/ # 纯 Kotlin/JVM TCP client connection
@@ -46,7 +52,7 @@ Copy / Copy & Clear
 └── .github/workflows/      # CI 与发布工作流
 ```
 
-三个模块属于同一个根 Gradle 项目，但保持各自的平台依赖和构建任务边界。
+所有模块属于同一个根 Gradle 项目，但保持各自的平台依赖和构建任务边界。App 通过 `core:data` 使用 Repository，不直接依赖 `core:datastore`。
 
 ## 构建和测试
 
@@ -127,7 +133,6 @@ Tag 只是发布工作流的触发器，工作流不会强制比较 Tag 和 `bri
 
 ## 开发文档
 
-- [完整需求说明](docs/requirements.md)
 - [TCP 协议](docs/tcp-protocol.md)
 - [Git 提交规范](docs/git-commit-convention.md)
 - [Changelog](CHANGELOG.md)
