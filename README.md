@@ -38,6 +38,7 @@ Copy / Copy & Clear
 ├── app/                    # Android App、Repository、Service、TCP Server
 ├── protocol/               # 纯 Kotlin/JVM 共享协议模型
 ├── core/framing/           # 纯 Kotlin/JVM 长度前缀 framing
+├── core/crypto/            # 纯 Kotlin/JVM 共享密钥握手和加密传输
 ├── core/connection-client/ # 纯 Kotlin/JVM TCP client connection
 ├── core/connection-server/ # 纯 Kotlin/JVM TCP server connection
 ├── android-studio-plugin/  # Android Studio / IntelliJ IDEA Plugin 和 Tool Window
@@ -71,6 +72,22 @@ Plugin distribution 位于：
 ```text
 android-studio-plugin/build/distributions/
 ```
+
+### 共享密钥构建参数
+
+TCP 传输使用 App 和 Plugin 共同约定的共享密钥。构建 App 和 Plugin 时，必须传入相同的 `inputBridgeSharedSecret` Gradle 参数：
+
+```bash
+./gradlew \
+  -PinputBridgeSharedSecret="my-local-input-bridge-secret" \
+  :app:assembleDebug \
+  :android-studio-plugin:buildPlugin
+```
+
+如果没有提供该参数，构建会使用开发默认值
+`input-bridge-development-default-secret`。这个默认值只用于本地开发，发布生产版本时应显式提供自己的值，并且不要将共享密钥提交到 Git 仓库。
+
+共享密钥不是直接作为 AES 密钥使用，而是在连接建立时用于握手和派生传输密钥。App 和 Plugin 的值不一致时，TCP 连接会认证失败。
 
 CI 在 Pull Request 和推送到 `main` 时运行完整验证矩阵。发布通过推送
 `v<major>.<minor>.<patch>` Tag 触发，实际构建版本由根目录

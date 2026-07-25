@@ -57,12 +57,13 @@ Tool Window 实时展示文本
 
 ## 3. 模块边界
 
-根 Gradle 项目包含两个产品模块、一个共享业务协议模块和三个纯 Kotlin/JVM 连接模块：
+根 Gradle 项目包含两个产品模块、一个共享业务协议模块和四个纯 Kotlin/JVM 连接模块：
 
 ```text
 app/
 protocol/
 core/framing/
+core/crypto/
 core/connection-client/
 core/connection-server/
 android-studio-plugin/
@@ -82,9 +83,13 @@ android-studio-plugin/
 
 ### 3.4 `core/connection-client/` 与 `core/connection-server/`
 
-分别负责 TCP client/server socket 生命周期、framing、读写线程、单连接限制和 Ping/Pong。它们依赖 `protocol` 与 `core/framing`；业务握手、快照和清空逻辑仍由产品模块负责。
+分别负责 TCP client/server socket 生命周期、framing、加密传输、读写线程、单连接限制和 Ping/Pong。它们依赖 `protocol`、`core/framing` 与 `core/crypto`；业务握手、快照和清空逻辑仍由产品模块负责。
 
-### 3.3 `android-studio-plugin/`
+### 3.5 `core:crypto/`
+
+负责基于 Gradle 注入的共享密钥执行 transport handshake、HKDF-SHA-256 密钥派生和 AES-256-GCM 记录保护。该模块为纯 Kotlin/JVM，不依赖 Android、Ktor、`protocol` 或 IntelliJ Platform；它不定义业务 JSON 消息。
+
+### 3.6 `android-studio-plugin/`
 
 负责 Tool Window、ADB 定位与设备处理、端口转发、TCP Client、连接状态、Clipboard 写入和 Copy & Clear。
 
@@ -172,22 +177,26 @@ data class TextState(
 
 ## 7. TCP 协议
 
-协议版本为 `3`，完整定义见 [`docs/tcp-protocol.md`](tcp-protocol.md)。
+业务协议版本为 `3`，传输协议版本为 `1`，完整定义见 [`docs/tcp-protocol.md`](tcp-protocol.md)。
 
-### 7.1 Handshake
+### 7.1 Encrypted transport handshake
+
+TCP 连接建立后，双方先完成基于共享密钥的二进制 transport handshake。握手成功后，所有业务消息（包括 Ping/Pong）都通过 AES-256-GCM 加密记录传输。共享密钥通过 Gradle `inputBridgeSharedSecret` 属性注入；未提供时使用开发默认值。
+
+### 7.2 Business handshake
 
 客户端连接后必须首先发送 `hello`，包含 `protocolVersion` 和 `requestId`。Server 回复 `hello_ack`，然后发送不带 request ID 的初始 `text_snapshot`。
 
 版本不兼容、首条消息错误、无效 JSON、非法长度、无效 UTF-8 和非法消息顺序都必须返回明确错误，并在协议错误后关闭会话。
 
-### 7.2 Server events
+### 7.3 Server events
 
 - `text_snapshot`：初始快照或响应明确快照请求。
 - `text_changed`：当前 Repository 状态变化时主动推送。
 
 快速连续更新可以在单个会话内合并，但最终必须提供最新状态，不得依赖轮询。
 
-### 7.3 Client commands
+### 7.4 Client commands
 
 - `hello`：建立连接并协商协议版本。
 - `get_snapshot`：请求当前快照。
@@ -195,7 +204,7 @@ data class TextState(
 
 需要响应的命令必须使用唯一 `requestId`，响应必须回传相同 ID。Clear 成功返回 `clear_succeeded`；版本冲突返回 `version_conflict`，不得清空更新后的文本。
 
-### 7.4 Error messages
+### 7.5 Error messages
 
 错误使用统一 `error` 消息结构：
 

@@ -1,5 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 private val ANDROID_MAX_VERSION_CODE = 2_100_000_000L
+private val DEFAULT_INPUT_BRIDGE_SHARED_SECRET = "input-bridge-development-default-secret"
 
 plugins {
   alias(libs.plugins.android.application) apply false
@@ -67,6 +68,9 @@ allprojects {
 }
 
 extra["bridgeVersionCode"] = bridgeVersion.versionCode
+extra["inputBridgeSharedSecret"] = providers.gradleProperty("inputBridgeSharedSecret")
+  .orElse(DEFAULT_INPUT_BRIDGE_SHARED_SECRET)
+  .get()
 
 tasks.register("verifyBridgeVersion") {
   notCompatibleWithConfigurationCache("Version parser self-check uses a Gradle script action.")

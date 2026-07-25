@@ -20,33 +20,63 @@ The transport connection and the business protocol are separate:
   framing, I/O, and Ping/Pong.
 - `:core:connection-server` accepts a TCP socket and handles server-side
   framing, I/O, single-client admission, and Ping/Pong.
+- `:core:crypto` performs the transport handshake, derives session keys from
+  the shared secret, and encrypts/decrypts transport records.
 - `:protocol` defines the versioned JSON business messages.
 
-Future encryption belongs to the connection layer and can wrap the byte stream.
-It is not part of the current protocol.
+Encryption is a transport concern and does not change the JSON business
+protocol. The client and App receive only authenticated business messages.
 
 ## Frame format
 
-Every frame is:
+After the transport handshake, every frame is:
 
 ```text
-[4-byte unsigned big-endian payload length][UTF-8 JSON payload]
+[4-byte unsigned big-endian encrypted-record length][nonce][ciphertext][authentication tag]
 ```
 
 The receiver must read exactly the declared number of bytes. One TCP read may
 contain part of a frame, one complete frame, or several frames. A length above
-`512 KiB`, a negative signed representation, incomplete payload, or invalid
-UTF-8 causes the connection to close. The length is checked before allocating
-the payload buffer.
+`512 KiB + 28 bytes`, a negative signed representation, incomplete payload, or
+invalid authentication causes the connection to close. The length is checked
+before allocating the payload buffer. The length itself is not encrypted: it
+is needed to find the end of the encrypted record, but it contains no business
+data.
 
-The payload is one JSON object with a `type` discriminator. Unknown fields are
-ignored; unknown message types and malformed JSON are protocol errors.
+The decrypted payload is one UTF-8 JSON object with a `type` discriminator.
+Unknown fields are ignored; unknown message types and malformed JSON are
+protocol errors.
+
+## Encrypted transport
+
+The App and plugin must be built with the same shared secret. Pass it to
+Gradle with `-PinputBridgeSharedSecret=<secret>`. When the property is absent,
+both products use the development default
+`input-bridge-development-default-secret`; this default must not be used for a
+production distribution.
+
+Before any business JSON is sent, the client and server exchange a small
+binary transport handshake. It authenticates both sides using the shared
+secret and fresh random client/server nonces. A successful handshake derives
+separate AES-256-GCM keys and nonce prefixes for each direction. The transport
+protocol version is `1`; it is independent of the business protocol version.
+
+Each encrypted record contains a 12-byte nonce, AES-GCM ciphertext including a
+16-byte authentication tag, and no plaintext header besides the record length.
+The nonce contains a direction-specific prefix and a monotonically increasing
+record sequence. Reordered, replayed, tampered, or wrong-direction records are
+rejected. The current design uses a pre-shared secret and does not provide
+forward secrecy; there is no legacy unencrypted transport compatibility mode.
+
+The maximum decrypted business payload remains `512 KiB`. The framing limit is
+`512 KiB + 28 bytes` to account for the encrypted record overhead.
 
 ## Constants
 
 | Name | Value |
 | --- | --- |
 | Business protocol version | `3` |
+| Transport protocol version | `1` |
 | Server host | `127.0.0.1` |
 | Server and ADB-forward port | `18080` |
 | Maximum frame payload | `512 KiB` |
@@ -56,9 +86,9 @@ ignored; unknown message types and malformed JSON are protocol errors.
 The client TCP connect timeout is `2 seconds`. Plugin requests wait at most
 `4 seconds`; ADB commands retain their `5-second` timeout.
 
-## Handshake
+## Business handshake
 
-The client must send `hello` first:
+After the encrypted transport handshake, the client must send `hello` first:
 
 ```json
 {"type":"hello","protocolVersion":3,"requestId":"hello-1"}

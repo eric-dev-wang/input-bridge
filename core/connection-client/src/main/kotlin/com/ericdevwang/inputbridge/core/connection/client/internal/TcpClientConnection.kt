@@ -1,5 +1,10 @@
 package com.ericdevwang.inputbridge.core.connection.client.internal
 
+import com.ericdevwang.inputbridge.core.connection.client.TcpConnectionClientConfig
+import com.ericdevwang.inputbridge.core.crypto.ClientHandshake
+import com.ericdevwang.inputbridge.core.crypto.CryptoSession
+import com.ericdevwang.inputbridge.core.crypto.ENCRYPTED_RECORD_OVERHEAD_BYTES
+import com.ericdevwang.inputbridge.core.framing.DEFAULT_MAX_FRAME_BYTES
 import com.ericdevwang.inputbridge.core.framing.LengthPrefixedFrameReader
 import com.ericdevwang.inputbridge.core.framing.LengthPrefixedFrameWriter
 import com.ericdevwang.inputbridge.core.connection.client.ClientConnection
@@ -18,18 +23,27 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class TcpClientConnection(
     private val socket: Socket,
     private val listener: ClientConnectionListener,
+    private val config: TcpConnectionClientConfig,
 ) : ClientConnection {
     private val closed = AtomicBoolean(false)
     private val lifecycleLock = Any()
     private val outgoing = LinkedBlockingQueue<ByteArray>()
-    private val reader = LengthPrefixedFrameReader(socket.getInputStream())
-    private val writer = LengthPrefixedFrameWriter(socket.getOutputStream())
+    private val reader = LengthPrefixedFrameReader(
+        socket.getInputStream(),
+        DEFAULT_MAX_FRAME_BYTES + ENCRYPTED_RECORD_OVERHEAD_BYTES,
+    )
+    private val writer = LengthPrefixedFrameWriter(
+        socket.getOutputStream(),
+        DEFAULT_MAX_FRAME_BYTES + ENCRYPTED_RECORD_OVERHEAD_BYTES,
+    )
+    private lateinit var session: CryptoSession
     @Volatile
     private var writerThread: Thread? = null
 
     internal fun start() {
         synchronized(lifecycleLock) {
             if (closed.get()) return
+            performHandshake()
             writerThread = Thread(::writeLoop, "input-bridge-tcp-client-writer").apply {
                 isDaemon = true
                 start()
@@ -39,6 +53,17 @@ internal class TcpClientConnection(
             isDaemon = true
             start()
         }
+    }
+
+    private fun performHandshake() {
+        socket.soTimeout = config.handshakeTimeoutMillis
+        val handshake = ClientHandshake(config.sharedSecret)
+        writer.write(handshake.createHello())
+        val serverHello = reader.read()
+            ?: throw IOException("Transport handshake closed before server hello.")
+        writer.write(handshake.acceptServerHello(serverHello))
+        session = handshake.createSession()
+        socket.soTimeout = 0
     }
 
     override fun send(message: BridgeMessage): Boolean {
@@ -57,7 +82,7 @@ internal class TcpClientConnection(
     private fun writeLoop() {
         try {
             while (!closed.get()) {
-                writer.write(outgoing.take())
+                writer.write(session.encrypt(outgoing.take()))
             }
         } catch (interrupted: InterruptedException) {
             Thread.currentThread().interrupt()
@@ -72,9 +97,10 @@ internal class TcpClientConnection(
         try {
             while (!closed.get()) {
                 val frame = reader.read() ?: break
+                val payload = session.decrypt(frame)
                 val message = ProtocolJson.default.decodeFromString(
                     BridgeMessage.serializer(),
-                    frame.toString(StandardCharsets.UTF_8),
+                    payload.toString(StandardCharsets.UTF_8),
                 )
                 when (message) {
                     is Ping -> send(Pong(message.requestId))

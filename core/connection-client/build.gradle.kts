@@ -8,6 +8,8 @@ kotlin {
 
 dependencies {
     api(project(":protocol"))
+    implementation(project(":core:crypto"))
     implementation(project(":core:framing"))
     testImplementation(libs.junit)
+    testImplementation(project(":core:connection-server"))
 }

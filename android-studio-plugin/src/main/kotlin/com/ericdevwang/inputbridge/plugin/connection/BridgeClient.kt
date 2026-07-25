@@ -205,6 +205,7 @@ class JdkBridgeClient(
         fun create(): JdkBridgeClient = JdkBridgeClient(
             connectionClient = TcpConnectionClient(
                 TcpConnectionClientConfig(
+                    sharedSecret = BridgeSecurityConfig.sharedSecret,
                     host = BridgeNetworkConfig.HOST,
                     port = BridgeNetworkConfig.PORT,
                     connectTimeoutMillis = BridgeNetworkConfig.TCP_CONNECT_TIMEOUT_MILLIS.toInt(),

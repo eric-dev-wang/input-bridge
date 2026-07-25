@@ -1,3 +1,6 @@
+fun String.toBuildConfigStringLiteral(): String =
+  "\"${replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")}\""
+
 plugins {
   alias(libs.plugins.inputbridge.android.application)
   alias(libs.plugins.compose.compiler)
@@ -11,6 +14,8 @@ android {
         applicationId = "com.ericdevwang.inputbridge"
         versionCode = rootProject.extra["bridgeVersionCode"] as Int
         versionName = rootProject.version.toString()
+        val sharedSecret = rootProject.extra["inputBridgeSharedSecret"] as String
+        buildConfigField("String", "INPUT_BRIDGE_SHARED_SECRET", sharedSecret.toBuildConfigStringLiteral())
     }
 
     buildTypes {
@@ -22,7 +27,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
 
@@ -55,6 +60,7 @@ dependencies {
 
   // Local TCP server
   implementation(project(":core:connection-server"))
+  testImplementation(project(":core:connection-client"))
   testImplementation(project(":core:framing"))
 
   // Compose

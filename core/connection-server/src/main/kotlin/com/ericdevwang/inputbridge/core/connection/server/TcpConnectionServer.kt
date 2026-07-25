@@ -1,20 +1,21 @@
 package com.ericdevwang.inputbridge.core.connection.server
 
 import com.ericdevwang.inputbridge.core.connection.server.internal.TcpServerConnection
-import com.ericdevwang.inputbridge.core.connection.server.internal.sendBusyAndClose
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ConcurrentHashMap
 
 class TcpConnectionServer(
-    private val config: TcpConnectionServerConfig = TcpConnectionServerConfig(),
+    private val config: TcpConnectionServerConfig,
     private val listener: ConnectionServerListener,
 ) {
     private val running = AtomicBoolean(false)
     private val currentConnection = AtomicReference<TcpServerConnection?>()
+    private val connections = ConcurrentHashMap.newKeySet<TcpServerConnection>()
     private var serverSocket: ServerSocket? = null
     private var acceptThread: Thread? = null
 
@@ -43,7 +44,9 @@ class TcpConnectionServer(
         if (!running.compareAndSet(true, false)) return
         runCatching { serverSocket?.close() }
         serverSocket = null
-        currentConnection.getAndSet(null)?.close()
+        connections.toList().forEach(TcpServerConnection::close)
+        connections.clear()
+        currentConnection.set(null)
         acceptThread?.interrupt()
         acceptThread = null
     }
@@ -62,17 +65,32 @@ class TcpConnectionServer(
     }
 
     private fun accept(socket: Socket) {
-        val connection = TcpServerConnection(socket, config) { closedConnection, cause ->
-            currentConnection.compareAndSet(closedConnection, null)
-            listener.onClientDisconnected(closedConnection, cause)
-        }
-
-        if (!currentConnection.compareAndSet(null, connection)) {
-            sendBusyAndClose(socket)
-            return
-        }
-
-        listener.onClientConnected(connection)
+        lateinit var connection: TcpServerConnection
+        connection = TcpServerConnection(
+            socket = socket,
+            config = config,
+            onReady = { readyConnection ->
+                if (currentConnection.compareAndSet(null, readyConnection)) {
+                    listener.onClientConnected(readyConnection)
+                } else {
+                    readyConnection.sendAndCloseServerBusy()
+                }
+            },
+            onClosed = { closedConnection, cause ->
+                connections.remove(closedConnection)
+                if (currentConnection.compareAndSet(closedConnection, null)) {
+                    listener.onClientDisconnected(closedConnection, cause)
+                }
+            },
+        )
+        connections.add(connection)
         connection.start()
     }
 }
+
+private fun TcpServerConnection.sendAndCloseServerBusy(): Boolean = sendAndClose(
+    com.ericdevwang.inputbridge.protocol.BridgeError(
+        code = "SERVER_BUSY",
+        message = "The server already has an active client.",
+    ),
+)

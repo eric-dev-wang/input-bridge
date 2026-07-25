@@ -1,52 +1,48 @@
 package com.ericdevwang.inputbridge.core.connection.client
 
-import com.ericdevwang.inputbridge.core.framing.LengthPrefixedFrameReader
-import com.ericdevwang.inputbridge.core.framing.LengthPrefixedFrameWriter
-import com.ericdevwang.inputbridge.protocol.BridgeMessage
-import com.ericdevwang.inputbridge.protocol.Ping
-import com.ericdevwang.inputbridge.protocol.Pong
-import com.ericdevwang.inputbridge.protocol.ProtocolJson
+import com.ericdevwang.inputbridge.core.connection.server.ConnectionServerListener
+import com.ericdevwang.inputbridge.core.connection.server.ServerConnection
+import com.ericdevwang.inputbridge.core.connection.server.TcpConnectionServer
+import com.ericdevwang.inputbridge.core.connection.server.TcpConnectionServerConfig
 import java.net.ServerSocket
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.concurrent.thread
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TcpConnectionClientTest {
     @Test
     fun automaticallyRepliesToProtocolPingWithMatchingPong() {
-        ServerSocket(0).use { serverSocket ->
-            val failure = AtomicReference<Throwable?>()
-            val completed = CountDownLatch(1)
-            val acceptThread = thread {
-                try {
-                    serverSocket.accept().use { socket ->
-                        val reader = LengthPrefixedFrameReader(socket.getInputStream())
-                        val writer = LengthPrefixedFrameWriter(socket.getOutputStream())
-                        writer.writeMessage(Ping("ping-1"))
-                        assertEquals(Pong("ping-1"), reader.readMessage())
-                    }
-                } catch (cause: Throwable) {
-                    failure.set(cause)
-                } finally {
-                    completed.countDown()
+        val clientClosed = CountDownLatch(1)
+        val port = freePort()
+        val server = TcpConnectionServer(
+            TcpConnectionServerConfig(
+                sharedSecret = TEST_SECRET,
+                port = port,
+                heartbeatIntervalMillis = 20L,
+                heartbeatTimeoutMillis = 200L,
+            ),
+            object : ConnectionServerListener {
+                override fun onClientConnected(connection: ServerConnection) {
+                    connection.setListener(object : com.ericdevwang.inputbridge.core.connection.server.ServerConnectionListener {})
                 }
             }
-            val client = TcpConnectionClient(
-                TcpConnectionClientConfig(port = serverSocket.localPort),
-            ).connect(object : ClientConnectionListener {})
+        )
+        server.start()
+        val client = TcpConnectionClient(
+            TcpConnectionClientConfig(sharedSecret = TEST_SECRET, port = port),
+        ).connect(object : ClientConnectionListener {
+            override fun onClosed(cause: Throwable?) {
+                clientClosed.countDown()
+            }
+        })
 
-            assertEquals(true, completed.await(2, TimeUnit.SECONDS))
-            assertNull(failure.get())
+        try {
+            assertFalse(clientClosed.await(300, TimeUnit.MILLISECONDS))
+        } finally {
             client.close()
-            acceptThread.join(1_000)
+            server.stop()
         }
     }
 
@@ -54,27 +50,34 @@ class TcpConnectionClientTest {
     fun closingConnectionStopsIdleWriterThread() {
         val writerThreadName = "input-bridge-tcp-client-writer"
         val baseline = liveThreadCount(writerThreadName)
-        ServerSocket(0).use { serverSocket ->
-            val accepted = CountDownLatch(1)
-            val release = CountDownLatch(1)
-            val acceptThread = thread {
-                serverSocket.accept().use {
+        val accepted = CountDownLatch(1)
+        val port = freePort()
+        val server = TcpConnectionServer(
+            TcpConnectionServerConfig(sharedSecret = TEST_SECRET, port = port),
+            object : ConnectionServerListener {
+                override fun onClientConnected(connection: ServerConnection) {
                     accepted.countDown()
-                    release.await()
                 }
             }
-            val client = TcpConnectionClient(
-                TcpConnectionClientConfig(port = serverSocket.localPort),
-            ).connect(object : ClientConnectionListener {})
+        )
+        server.start()
+        val client = TcpConnectionClient(
+            TcpConnectionClientConfig(sharedSecret = TEST_SECRET, port = port),
+        ).connect(object : ClientConnectionListener {})
 
+        try {
             assertTrue(accepted.await(2, TimeUnit.SECONDS))
             client.close()
             awaitThreadCountAtMost(writerThreadName, baseline)
-
-            release.countDown()
-            serverSocket.close()
-            acceptThread.join(1_000)
+        } finally {
+            server.stop()
         }
+    }
+
+    private fun freePort(): Int = ServerSocket(0).use { it.localPort }
+
+    private companion object {
+        const val TEST_SECRET = "test-shared-secret"
     }
 }
 
@@ -87,17 +90,4 @@ private fun awaitThreadCountAtMost(name: String, expectedMaximum: Int) {
         Thread.sleep(10)
     }
     assertTrue(liveThreadCount(name) <= expectedMaximum)
-}
-
-private fun LengthPrefixedFrameWriter.writeMessage(message: BridgeMessage) {
-    write(
-        ProtocolJson.default
-            .encodeToString(BridgeMessage.serializer(), message)
-            .toByteArray(StandardCharsets.UTF_8),
-    )
-}
-
-private fun LengthPrefixedFrameReader.readMessage(): BridgeMessage {
-    val frame = read() ?: error("Expected a protocol message")
-    return ProtocolJson.default.decodeFromString(frame.toString(StandardCharsets.UTF_8))
 }
