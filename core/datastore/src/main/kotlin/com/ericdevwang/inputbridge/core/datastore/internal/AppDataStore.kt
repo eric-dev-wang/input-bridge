@@ -1,4 +1,4 @@
-package com.ericdevwang.inputbridge.core.datastore
+package com.ericdevwang.inputbridge.core.datastore.internal
 
 import android.content.Context
 import androidx.datastore.preferences.core.longPreferencesKey

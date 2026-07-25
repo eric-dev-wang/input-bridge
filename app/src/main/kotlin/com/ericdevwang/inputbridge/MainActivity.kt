@@ -12,7 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.ericdevwang.inputbridge.service.InputBridgeService
-import com.ericdevwang.inputbridge.core.designsystem.InputBridgeTheme
+import com.ericdevwang.inputbridge.core.designsystem.theme.InputBridgeTheme
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(

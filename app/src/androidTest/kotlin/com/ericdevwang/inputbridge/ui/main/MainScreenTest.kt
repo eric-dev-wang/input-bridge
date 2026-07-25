@@ -17,7 +17,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.ericdevwang.inputbridge.core.data.model.MAX_TEXT_CODE_POINTS
 import com.ericdevwang.inputbridge.core.data.model.TextChangeResult
 import com.ericdevwang.inputbridge.core.data.model.TextState
-import com.ericdevwang.inputbridge.core.designsystem.InputBridgeTheme
+import com.ericdevwang.inputbridge.core.designsystem.theme.InputBridgeTheme
 import org.junit.Rule
 import org.junit.Test
 

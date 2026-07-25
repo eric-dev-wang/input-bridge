@@ -1,7 +1,5 @@
 package com.ericdevwang.inputbridge.core.data.model
 
-const val MAX_TEXT_CODE_POINTS = 8_000
-
 data class TextState(
     val text: String,
     val version: Long,
@@ -26,9 +24,4 @@ data class TextState(
     companion object {
         fun initial(nowMillis: Long) = TextState("", 0L, nowMillis)
     }
-}
-
-sealed interface TextChangeResult {
-    data class Accepted(val state: TextState) : TextChangeResult
-    data object RejectedTooLong : TextChangeResult
 }

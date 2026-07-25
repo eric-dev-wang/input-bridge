@@ -1,5 +1,8 @@
-package com.ericdevwang.inputbridge.core.data.repository
+package com.ericdevwang.inputbridge.core.data.internal.repository
 
+import com.ericdevwang.inputbridge.core.data.repository.ClearResult
+import com.ericdevwang.inputbridge.core.data.repository.PersistenceResult
+import com.ericdevwang.inputbridge.core.data.repository.TextRepository
 import com.ericdevwang.inputbridge.core.data.model.TextState
 import com.ericdevwang.inputbridge.core.datastore.PersistedTextState
 import com.ericdevwang.inputbridge.core.datastore.TextDataSource

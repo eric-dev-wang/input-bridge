@@ -1,4 +1,4 @@
-package com.ericdevwang.inputbridge.core.designsystem
+package com.ericdevwang.inputbridge.core.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
