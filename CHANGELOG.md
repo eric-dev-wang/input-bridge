@@ -7,6 +7,24 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 While the project remains in the v1.x preview phase, releases may introduce
 breaking changes without preserving upgrade compatibility.
 
+## [1.2.0] - 2026-07-25
+
+### Added
+
+- Added encrypted TCP transport with shared-secret authentication, HKDF-SHA-256 key derivation, and AES-256-GCM records.
+- Added reusable framing, TCP client/server, crypto, data, DataStore, design system, and Gradle convention modules.
+
+### Changed
+
+- Replaced the legacy WebSocket transport with length-prefixed TCP framing over the ADB-forwarded loopback connection.
+- Kept the business protocol at version `3` and introduced transport protocol version `1`.
+- Centralized common Android and Kotlin/JVM build configuration in Convention Plugins.
+
+### Compatibility
+
+- The Android App and Android Studio plugin must be upgraded together and built with the same `inputBridgeSharedSecret` value.
+- Legacy unencrypted transport is not supported. The v1.x preview line may introduce breaking changes without preserving upgrade compatibility.
+
 ## [1.1.2] - 2026-07-18
 
 ### Changed
@@ -77,6 +95,7 @@ breaking changes without preserving upgrade compatibility.
 - Consolidated the Android App, protocol module, and Android Studio plugin into one Gradle project.
 - Restricted the Android HTTP server to `127.0.0.1:18080` and communication to the ADB-forwarded local channel.
 
+[1.2.0]: https://github.com/eric-dev-wang/input-bridge/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/eric-dev-wang/input-bridge/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/eric-dev-wang/input-bridge/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/eric-dev-wang/input-bridge/compare/v1.0.1...v1.1.0
