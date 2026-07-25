@@ -1,4 +1,4 @@
-package com.ericdevwang.inputbridge.core.designsystem.theme
+package com.ericdevwang.inputbridge.core.designsystem.internal
 
 import androidx.compose.ui.graphics.Color
 

@@ -33,7 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ericdevwang.inputbridge.R
-import com.ericdevwang.inputbridge.core.designsystem.theme.InputBridgeTheme
+import com.ericdevwang.inputbridge.core.designsystem.InputBridgeTheme
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
