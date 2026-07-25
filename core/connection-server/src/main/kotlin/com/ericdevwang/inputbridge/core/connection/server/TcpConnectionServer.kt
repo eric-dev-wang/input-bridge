@@ -44,7 +44,7 @@ class TcpConnectionServer(
         if (!running.compareAndSet(true, false)) return
         runCatching { serverSocket?.close() }
         serverSocket = null
-        connections.toList().forEach(TcpServerConnection::close)
+        connections.forEach(TcpServerConnection::close)
         connections.clear()
         currentConnection.set(null)
         acceptThread?.interrupt()

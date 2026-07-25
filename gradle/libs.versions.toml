@@ -57,6 +57,7 @@ android-application = { id = "com.android.application", version.ref = "androidGr
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 inputbridge-android-application = { id = "com.ericdevwang.inputbridge.android.application" }
 inputbridge-android-library = { id = "com.ericdevwang.inputbridge.android.library" }
+inputbridge-jvm-library = { id = "com.ericdevwang.inputbridge.jvm.library" }
 inputbridge-koin = { id = "com.ericdevwang.inputbridge.koin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
