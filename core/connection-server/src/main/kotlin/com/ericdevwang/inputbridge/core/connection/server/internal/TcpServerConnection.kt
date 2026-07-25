@@ -74,6 +74,10 @@ internal class TcpServerConnection(
                     start()
                 }
             }
+            // Register the application listener before reading application frames. The client
+            // can send its first message immediately after the transport handshake completes.
+            onReady(this)
+            if (closed.get()) return
             Thread(::readLoop, "input-bridge-tcp-server-reader").apply {
                 isDaemon = true
                 start()
@@ -84,7 +88,6 @@ internal class TcpServerConnection(
                 config.heartbeatIntervalMillis,
                 TimeUnit.MILLISECONDS,
             )
-            onReady(this)
         } catch (cause: Throwable) {
             closeInternal(cause)
         }
