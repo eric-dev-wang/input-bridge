@@ -4,7 +4,6 @@ import com.ericdevwang.inputbridge.core.connection.client.TcpConnectionClientCon
 import com.ericdevwang.inputbridge.core.crypto.ClientHandshake
 import com.ericdevwang.inputbridge.core.crypto.CryptoSession
 import com.ericdevwang.inputbridge.core.crypto.ENCRYPTED_RECORD_OVERHEAD_BYTES
-import com.ericdevwang.inputbridge.core.crypto.HandshakeException
 import com.ericdevwang.inputbridge.core.framing.DEFAULT_MAX_FRAME_BYTES
 import com.ericdevwang.inputbridge.core.framing.LengthPrefixedFrameReader
 import com.ericdevwang.inputbridge.core.framing.LengthPrefixedFrameWriter
@@ -61,7 +60,7 @@ internal class TcpClientConnection(
         val handshake = ClientHandshake(config.sharedSecret)
         writer.write(handshake.createHello())
         val serverHello = reader.read()
-            ?: throw HandshakeException("Transport handshake closed before server hello.")
+            ?: throw IOException("Transport handshake closed before server hello.")
         writer.write(handshake.acceptServerHello(serverHello))
         session = handshake.createSession()
         socket.soTimeout = 0

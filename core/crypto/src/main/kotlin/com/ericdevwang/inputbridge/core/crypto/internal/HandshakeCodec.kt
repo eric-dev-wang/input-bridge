@@ -1,7 +1,5 @@
 package com.ericdevwang.inputbridge.core.crypto.internal
 
-import com.ericdevwang.inputbridge.core.crypto.HandshakeException
-import com.ericdevwang.inputbridge.core.crypto.TRANSPORT_PROTOCOL_VERSION
 import java.nio.ByteBuffer
 
 private val MAGIC = byteArrayOf(0x49, 0x42, 0x54, 0x50)

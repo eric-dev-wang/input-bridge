@@ -1,6 +1,7 @@
 package com.ericdevwang.inputbridge.core.crypto
 
-import java.security.SecureRandom
+import com.ericdevwang.inputbridge.core.crypto.internal.AuthenticationException
+import com.ericdevwang.inputbridge.core.crypto.internal.ReplayException
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.fail
 import org.junit.Test
@@ -8,8 +9,8 @@ import org.junit.Test
 class CryptoSessionTest {
     @Test
     fun handshakeCreatesBidirectionalAuthenticatedSessions() {
-        val clientHandshake = ClientHandshake(TEST_SECRET, SecureRandom())
-        val serverHandshake = ServerHandshake(TEST_SECRET, SecureRandom())
+        val clientHandshake = ClientHandshake(TEST_SECRET)
+        val serverHandshake = ServerHandshake(TEST_SECRET)
 
         val clientHello = clientHandshake.createHello()
         val serverHello = serverHandshake.acceptClientHello(clientHello)
@@ -25,8 +26,8 @@ class CryptoSessionTest {
 
     @Test
     fun wrongSecretCannotCompleteHandshake() {
-        val clientHandshake = ClientHandshake(TEST_SECRET, SecureRandom())
-        val serverHandshake = ServerHandshake("wrong-secret", SecureRandom())
+        val clientHandshake = ClientHandshake(TEST_SECRET)
+        val serverHandshake = ServerHandshake("wrong-secret")
 
         val clientHello = clientHandshake.createHello()
         val serverHello = serverHandshake.acceptClientHello(clientHello)
@@ -58,8 +59,8 @@ class CryptoSessionTest {
     }
 
     private fun connectedSessions(): Pair<CryptoSession, CryptoSession> {
-        val clientHandshake = ClientHandshake(TEST_SECRET, SecureRandom())
-        val serverHandshake = ServerHandshake(TEST_SECRET, SecureRandom())
+        val clientHandshake = ClientHandshake(TEST_SECRET)
+        val serverHandshake = ServerHandshake(TEST_SECRET)
         val clientHello = clientHandshake.createHello()
         val serverHello = serverHandshake.acceptClientHello(clientHello)
         val clientFinish = clientHandshake.acceptServerHello(serverHello)

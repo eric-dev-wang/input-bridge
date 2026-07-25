@@ -1,17 +1,17 @@
 package com.ericdevwang.inputbridge.core.crypto
 
+import com.ericdevwang.inputbridge.core.crypto.internal.AuthenticationException
+import com.ericdevwang.inputbridge.core.crypto.internal.CryptoSessionFactory
 import com.ericdevwang.inputbridge.core.crypto.internal.HandshakeCodec
+import com.ericdevwang.inputbridge.core.crypto.internal.HandshakeException
 import com.ericdevwang.inputbridge.core.crypto.internal.KeyDerivation
 import com.ericdevwang.inputbridge.core.crypto.internal.SessionMaterial
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 
-class ClientHandshake(
-    sharedSecret: String,
-    private val secureRandom: SecureRandom = SecureRandom(),
-) {
+class ClientHandshake(sharedSecret: String) {
     private val sharedSecretBytes = sharedSecret.requireSecret().toByteArray(StandardCharsets.UTF_8)
-    private val clientNonce = ByteArray(NONCE_BYTES).also(secureRandom::nextBytes)
+    private val clientNonce = ByteArray(NONCE_BYTES).also(SecureRandom()::nextBytes)
     private var material: SessionMaterial? = null
 
     fun createHello(): ByteArray = HandshakeCodec.clientHello(clientNonce)
@@ -29,7 +29,7 @@ class ClientHandshake(
     }
 
     fun createSession(): CryptoSession =
-        CryptoSession.forClient(checkNotNull(material) { "Transport handshake is incomplete" })
+        CryptoSessionFactory.forClient(checkNotNull(material) { "Transport handshake is incomplete" })
 }
 
 private const val NONCE_BYTES = 32
