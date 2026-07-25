@@ -8,7 +8,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:datastore"))
+    implementation(projects.core.datastore)
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)

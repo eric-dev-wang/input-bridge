@@ -3,8 +3,8 @@ plugins {
 }
 
 dependencies {
-    api(project(":protocol"))
-    implementation(project(":core:crypto"))
-    implementation(project(":core:framing"))
-    testImplementation(project(":core:connection-client"))
+    api(projects.protocol)
+    implementation(projects.core.crypto)
+    implementation(projects.core.framing)
+    testImplementation(projects.core.connectionClient)
 }

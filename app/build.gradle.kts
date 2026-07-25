@@ -39,9 +39,9 @@ android {
 }
 
 dependencies {
-  implementation(project(":core:designsystem"))
-  implementation(project(":core:data"))
-  implementation(project(":protocol"))
+  implementation(projects.core.designsystem)
+  implementation(projects.core.data)
+  implementation(projects.protocol)
 
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
@@ -59,9 +59,9 @@ dependencies {
   implementation(libs.koin.androidx.compose)
 
   // Local TCP server
-  implementation(project(":core:connection-server"))
-  testImplementation(project(":core:connection-client"))
-  testImplementation(project(":core:framing"))
+  implementation(projects.core.connectionServer)
+  testImplementation(projects.core.connectionClient)
+  testImplementation(projects.core.framing)
 
   // Compose
   implementation(libs.androidx.compose.ui)
