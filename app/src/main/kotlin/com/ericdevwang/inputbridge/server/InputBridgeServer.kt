@@ -1,5 +1,6 @@
 package com.ericdevwang.inputbridge.server
 
+import com.ericdevwang.inputbridge.BuildConfig
 import com.ericdevwang.inputbridge.core.connection.server.ConnectionServerListener
 import com.ericdevwang.inputbridge.core.connection.server.ServerConnection
 import com.ericdevwang.inputbridge.core.connection.server.ServerConnectionListener
@@ -36,6 +37,7 @@ private const val INITIAL_SNAPSHOT_TIMEOUT_MILLIS = 2_000L
 data class InputBridgeServerConfig(
     val host: String = DEFAULT_SERVER_HOST,
     val port: Int = DEFAULT_SERVER_PORT,
+    val sharedSecret: String = BuildConfig.INPUT_BRIDGE_SHARED_SECRET,
 )
 
 class InputBridgeServer(
@@ -54,6 +56,7 @@ class InputBridgeServer(
 
         server = TcpConnectionServer(
             config = TcpConnectionServerConfig(
+                sharedSecret = config.sharedSecret,
                 host = config.host,
                 port = config.port,
             ),

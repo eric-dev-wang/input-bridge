@@ -6,7 +6,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 
 class TcpConnectionClient(
-    private val config: TcpConnectionClientConfig = TcpConnectionClientConfig(),
+    private val config: TcpConnectionClientConfig,
 ) : ClientConnectionFactory {
     @Throws(IOException::class)
     override fun connect(listener: ClientConnectionListener): ClientConnection {
@@ -19,6 +19,11 @@ class TcpConnectionClient(
             throw cause
         }
 
-        return TcpClientConnection(socket, listener).also { it.start() }
+        return try {
+            TcpClientConnection(socket, listener, config).also { it.start() }
+        } catch (cause: IOException) {
+            runCatching { socket.close() }
+            throw cause
+        }
     }
 }

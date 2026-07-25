@@ -38,6 +38,7 @@ Copy / Copy & Clear
 ├── app/                    # Android App、Repository、Service、TCP Server
 ├── protocol/               # 纯 Kotlin/JVM 共享协议模型
 ├── core/framing/           # 纯 Kotlin/JVM 长度前缀 framing
+├── core/crypto/            # 纯 Kotlin/JVM 共享密钥握手和加密传输
 ├── core/connection-client/ # 纯 Kotlin/JVM TCP client connection
 ├── core/connection-server/ # 纯 Kotlin/JVM TCP server connection
 ├── android-studio-plugin/  # Android Studio / IntelliJ IDEA Plugin 和 Tool Window
