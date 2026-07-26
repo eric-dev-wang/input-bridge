@@ -65,7 +65,15 @@ Run commands from the repository root:
 ./gradlew :android-studio-plugin:buildPlugin
 ./gradlew :android-studio-plugin:test
 ./gradlew :android-studio-plugin:verifyPlugin
+./gradlew detektAll
+./gradlew -PdetektAutoCorrect=false detektAll
 ```
+
+Detekt is configured by the convention plugins and uses `config/detekt/detekt.yml`. It analyzes Kotlin
+sources in `main`, `test`, and `androidTest`; `build-logic/convention` itself is intentionally excluded.
+Local `detektAll` runs with auto-correction enabled by default and may modify source files. CI and Release
+must pass `-PdetektAutoCorrect=false`, so findings fail the build instead of changing files. Do not add a
+Detekt baseline, ktlint rules, or Compose-specific rules without an explicit scope decision.
 
 Use `adb forward tcp:18080 tcp:18080` for manual end-to-end checks. TCP and ADB operations must run off the IntelliJ EDT and use bounded timeouts.
 

@@ -20,6 +20,7 @@ kotlin {
 dependencies {
     compileOnly(libs.android.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin)
+    implementation(libs.detekt.gradle.plugin)
 }
 
 gradlePlugin {
@@ -43,6 +44,11 @@ gradlePlugin {
             id = "com.ericdevwang.inputbridge.jvm.library"
             implementationClass =
                 "com.ericdevwang.inputbridge.buildlogic.JvmLibraryConventionPlugin"
+        }
+        register("androidStudioPlugin") {
+            id = "com.ericdevwang.inputbridge.android.studio.plugin"
+            implementationClass =
+                "com.ericdevwang.inputbridge.buildlogic.AndroidStudioPluginConventionPlugin"
         }
     }
 }

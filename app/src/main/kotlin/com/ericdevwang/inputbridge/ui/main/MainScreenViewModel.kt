@@ -89,8 +89,9 @@ class MainScreenViewModel(
                     persistenceMessage = currentContent?.persistenceMessage,
                 )
             }
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
             mutableUiState.value = MainScreenUiState.InitializationError
         }
     }
@@ -98,7 +99,7 @@ class MainScreenViewModel(
     private fun persistClear(expectedVersion: Long, localClearedState: TextState) {
         viewModelScope.launch {
             try {
-                when (val result = repository.clear(expectedVersion)) {
+                when (repository.clear(expectedVersion)) {
                     is ClearResult.Cleared -> {
                         if (currentTextState.version == localClearedState.version) {
                             updateContent { it.copy(persistenceMessage = null) }
@@ -107,8 +108,9 @@ class MainScreenViewModel(
 
                     is ClearResult.VersionConflict -> reconcileClearConflict(localClearedState)
                 }
-            } catch (error: Exception) {
-                if (error is CancellationException) throw error
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
                 if (currentTextState.version == localClearedState.version) {
                     updateContent { it.copy(persistenceMessage = PersistenceMessage.SaveFailed) }
                 }
@@ -122,8 +124,9 @@ class MainScreenViewModel(
             if (currentTextState.version == localClearedState.version) {
                 showPersistedState(persistedState, persistenceMessage = null)
             }
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
             if (currentTextState.version == localClearedState.version) {
                 updateContent { it.copy(persistenceMessage = PersistenceMessage.SaveFailed) }
             }

@@ -70,7 +70,7 @@ class CryptoSessionTest {
     private inline fun <reified T : Throwable> assertThrows(block: () -> Unit) {
         try {
             block()
-            fail("Expected ${T::class.simpleName}")
+            fail("Expected ${T::class.simpleName ?: "unknown"}")
         } catch (cause: Throwable) {
             if (cause !is T) throw cause
         }

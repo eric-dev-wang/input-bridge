@@ -52,7 +52,7 @@ class ProcessAdbClient(
                     message = if (result.timedOut) {
                         "ADB command timed out after ${BridgeNetworkConfig.ADB_TIMEOUT_SECONDS} seconds."
                     } else {
-                        "ADB command failed with exit code ${result.exitCode}."
+                        "ADB command failed with exit code ${result.exitCode ?: "unknown"}."
                     },
                     command = command,
                     exitCode = result.exitCode,

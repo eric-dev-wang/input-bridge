@@ -7,6 +7,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.ericdevwang.inputbridge.ui.main.MainScreen
 
 @Composable
+@Suppress("FunctionName")
 fun MainNavigation() {
     val backStack = rememberNavBackStack(Main)
 

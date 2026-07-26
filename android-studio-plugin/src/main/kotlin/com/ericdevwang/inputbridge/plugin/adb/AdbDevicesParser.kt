@@ -1,6 +1,8 @@
 package com.ericdevwang.inputbridge.plugin.adb
 
 object AdbDevicesParser {
+    private val WHITESPACE = Regex("\\s+")
+
     fun parse(output: String): List<AdbDevice> = output.lineSequence()
         .mapNotNull(::parseLine)
         .toList()
@@ -16,6 +18,4 @@ object AdbDevicesParser {
 
         return AdbDevice(serial = columns[0], model = model)
     }
-
-    private val WHITESPACE = Regex("\\s+")
 }

@@ -38,7 +38,7 @@ Copy / Copy & Clear
 ```text
 .
 ├── app/                    # Android App UI、Foreground Service、TCP Server
-├── build-logic/convention/ # Android、Kotlin/JVM、Koin Convention Plugins
+├── build-logic/convention/ # Android、Kotlin/JVM、Android Studio、Koin、Detekt Convention Plugins
 ├── protocol/               # 纯 Kotlin/JVM 共享协议模型
 ├── core/datastore/         # Android DataStore 实现和 TextDataSource
 ├── core/data/              # TextRepository 和数据层状态模型
@@ -63,7 +63,24 @@ Copy / Copy & Clear
 ./gradlew :app:lintDebug
 ./gradlew :app:testDebugUnitTest
 ./gradlew :protocol:test
+./gradlew detektAll
 ```
+
+Detekt 默认会启用 auto-correct，适合本地整理代码：
+
+```bash
+./gradlew detektAll
+```
+
+CI 和 Release 会显式关闭 auto-correct，并在发现问题时使构建失败：
+
+```bash
+./gradlew -PdetektAutoCorrect=false detektAll
+```
+
+规则配置位于 [`config/detekt/detekt.yml`](config/detekt/detekt.yml)。Detekt 扫描各模块的
+`main`、`test` 和 `androidTest` Kotlin 源码，不使用 baseline；本地运行前请检查工作树，因为
+auto-correct 可能修改源文件。项目不引入 ktlint 或 Compose 专用 Detekt 规则。
 
 Plugin 默认使用 IntelliJ IDEA 2026.1.1 和 Android plugin 261.23567.138 构建及测试：
 

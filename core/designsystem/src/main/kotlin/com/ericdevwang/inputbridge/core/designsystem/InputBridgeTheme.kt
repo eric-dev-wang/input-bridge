@@ -36,6 +36,7 @@ private val LightColorScheme =
     )
 
 @Composable
+@Suppress("FunctionName")
 fun InputBridgeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+

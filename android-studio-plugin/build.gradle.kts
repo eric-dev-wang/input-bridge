@@ -22,16 +22,12 @@ abstract class GenerateSharedSecretResourceTask : DefaultTask() {
 }
 
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.inputbridge.android.studio.plugin)
     id("org.jetbrains.intellij.platform")
 }
 
 group = "com.ericdevwang.inputbridge.plugin"
 version = rootProject.version
-
-kotlin {
-    jvmToolchain(21)
-}
 
 val localAndroidStudioPath = providers.gradleProperty("androidStudioPath")
 val intellijIdeaVersion = "2026.1.1"
@@ -89,12 +85,5 @@ intellijPlatform {
                 current()
             }
         }
-    }
-}
-
-tasks {
-    withType<JavaCompile>().configureEach {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
     }
 }

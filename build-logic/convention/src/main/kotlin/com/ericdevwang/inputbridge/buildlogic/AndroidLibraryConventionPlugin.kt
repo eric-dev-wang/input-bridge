@@ -9,6 +9,7 @@ abstract class AndroidLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
             pluginManager.apply("com.android.library")
+            configureDetekt()
 
             extensions.configure<LibraryExtension> {
                 configureAndroid(this)

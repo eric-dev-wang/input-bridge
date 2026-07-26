@@ -317,7 +317,7 @@ class BridgeConnectionCoordinatorTest {
                 } else {
                     emptyList()
                 }
-            } ?: emptyList(),
+            }.orEmpty(),
         )
 
         override fun createForward(serial: String): AdbResult<Unit> {

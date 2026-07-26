@@ -1,0 +1,102 @@
+# Detekt 2.0.0-alpha.5 project policy.
+# The convention plugin builds upon Detekt's default configuration. This file
+# contains only project-specific opt-ins and high-noise exclusions.
+
+config:
+  validation: true
+  warningsAsErrors: true
+
+complexity:
+  CognitiveComplexMethod:
+    active: true
+    allowedComplexity: 20
+  CyclomaticComplexMethod:
+    allowedComplexity: 20
+  LongMethod:
+    active: false
+  LongParameterList:
+    active: false
+  NamedArguments:
+    active: false
+  NestedScopeFunctions:
+    active: false
+  StringLiteralDuplication:
+    active: false
+  TooManyFunctions:
+    active: false
+
+coroutines:
+  CoroutineLaunchedInTestWithoutRunTest:
+    active: true
+  GlobalCoroutineUsage:
+    active: true
+  InjectDispatcher:
+    active: false
+  SuspendFunSwallowedCancellation:
+    active: true
+
+exceptions:
+  ErrorUsageWithThrowable:
+    active: true
+  InstanceOfCheckForException:
+    active: false
+  NotImplementedDeclaration:
+    active: true
+  ObjectExtendsThrowable:
+    active: true
+  SwallowedException:
+    active: false
+  TooGenericExceptionCaught:
+    active: false
+
+performance:
+  CouldBeSequence:
+    active: true
+  UnnecessaryInitOnArray:
+    active: true
+  UnnecessaryPartOfBinaryExpression:
+    active: true
+  UnnecessaryTypeCasting:
+    active: true
+
+potential-bugs:
+  CastNullableToNonNullableType:
+    active: true
+  CastToNullableType:
+    active: true
+  CharArrayToStringCall:
+    active: true
+  DontDowncastCollectionTypes:
+    active: true
+  ElseCaseInsteadOfExhaustiveWhen:
+    active: false
+  ImplicitUnitReturnType:
+    active: false
+  MissingUseCall:
+    active: false
+  NullableToStringCall:
+    active: true
+  UnnecessaryNotNullCheck:
+    active: true
+
+style:
+  CanBeNonNullable:
+    active: true
+  ClassOrdering:
+    active: true
+  CollapsibleIfStatements:
+    active: true
+  DataClassShouldBeImmutable:
+    active: true
+  ExpressionBodySyntax:
+    active: false
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  LoopWithTooManyJumpStatements:
+    active: false
+  ReturnCount:
+    active: false
+  ThrowsCount:
+    active: false
