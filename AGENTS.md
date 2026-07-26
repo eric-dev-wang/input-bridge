@@ -72,7 +72,8 @@ Run commands from the repository root:
 Detekt is configured by the convention plugins and uses `config/detekt/detekt.yml`. It analyzes Kotlin
 sources in `main`, `test`, and `androidTest`; `build-logic/convention` itself is intentionally excluded.
 Local `detektAll` runs lightweight main/test/androidTest source checks with auto-correction enabled by default
-and may modify source files. Release Kotlin compilation also runs the type-resolution `detektRelease` check. CI and Release
+and may modify source files. Release verification runs the type-resolution `detektRelease` checks, which depend
+on the corresponding release Kotlin compilation. CI and Release
 must pass `-PdetektAutoCorrect=false`, so findings fail the build instead of changing files. Do not add a
 Detekt baseline, ktlint rules, or Compose-specific rules without an explicit scope decision.
 

@@ -67,7 +67,7 @@ Copy / Copy & Clear
 ```
 
 Detekt 默认会启用 auto-correct，适合本地整理代码。`detektAll` 只运行轻量的 main/test/androidTest 源码检查；
-带类型解析的 release 检查会在 release Kotlin 编译任务结束后自动执行：
+Release workflow 会单独执行带类型解析的 `detektRelease`，该任务会先依赖对应的 release Kotlin 编译：
 
 ```bash
 ./gradlew detektAll

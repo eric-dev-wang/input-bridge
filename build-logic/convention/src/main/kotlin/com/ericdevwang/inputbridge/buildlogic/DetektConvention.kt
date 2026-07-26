@@ -41,10 +41,6 @@ internal fun Project.configureDetekt() {
         }
     }
 
-    tasks.matching { task -> task.name == "compileReleaseKotlin" }.configureEach {
-        finalizedBy(tasks.withType<Detekt>().matching { task -> task.name == "detektRelease" })
-    }
-
     tasks.register<Detekt>("detektAll") {
         group = "verification"
         description = "Runs lightweight Detekt analysis for main, test, and androidTest sources."
