@@ -71,6 +71,7 @@ Release workflow 会单独执行带类型解析的 `detektRelease`，该任务�
 
 ```bash
 ./gradlew detektAll
+./gradlew -PdetektAutoCorrect=false detektRelease
 ```
 
 CI 和 Release 会显式关闭 auto-correct，并在发现问题时使构建失败：
