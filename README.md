@@ -66,7 +66,8 @@ Copy / Copy & Clear
 ./gradlew detektAll
 ```
 
-Detekt 默认会启用 auto-correct，适合本地整理代码：
+Detekt 默认会启用 auto-correct，适合本地整理代码。`detektAll` 只运行轻量的 main/test/androidTest 源码检查；
+带类型解析的 release 检查会在 release Kotlin 编译任务结束后自动执行：
 
 ```bash
 ./gradlew detektAll

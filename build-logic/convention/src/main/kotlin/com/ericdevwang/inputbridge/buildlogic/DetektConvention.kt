@@ -41,13 +41,19 @@ internal fun Project.configureDetekt() {
         }
     }
 
-    tasks.register("detektAll") {
+    tasks.matching { task -> task.name == "compileReleaseKotlin" }.configureEach {
+        finalizedBy(tasks.withType<Detekt>().matching { task -> task.name == "detektRelease" })
+    }
+
+    tasks.register<Detekt>("detektAll") {
         group = "verification"
-        description = "Runs all Detekt analysis tasks for this module."
-        dependsOn(
-            tasks.withType<Detekt>().matching { task ->
-                task.name != "detekt" && !task.name.endsWith("SourceSet")
-            },
+        description = "Runs lightweight Detekt analysis for main, test, and androidTest sources."
+        setSource(
+            files(
+                fileTree("src/main") { include("**/*.kt") },
+                fileTree("src/test") { include("**/*.kt") },
+                fileTree("src/androidTest") { include("**/*.kt") },
+            ),
         )
     }
 }
