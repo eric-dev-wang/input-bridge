@@ -22,7 +22,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -32,7 +36,8 @@ jobs:
 
       - name: Run verification matrix
         run: >-
-          ./gradlew
+          ./gradlew -PdetektAutoCorrect=false
+          detektAll
           :app:lintDebug
           :app:testDebugUnitTest
           :protocol:test

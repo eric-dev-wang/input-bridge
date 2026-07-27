@@ -112,12 +112,14 @@ internal class DefaultTextRepository(
             } else {
                 PersistenceResult.Superseded(request.state.version)
             }
-        } catch (error: Exception) {
-            if (error is CancellationException) {
-                request.result.cancel(error)
-                throw error
-            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
             PersistenceResult.Failed(request.state.version)
+        } finally {
+            if (!currentCoroutineContext().isActive) {
+                request.result.cancel()
+            }
         }
         request.result.complete(result)
     }
@@ -158,12 +160,14 @@ internal class DefaultTextRepository(
                     )
                 }
             }
-        } catch (error: Exception) {
-            if (error is CancellationException) {
-                request.result.cancel(error)
-                throw error
+        } catch (error: CancellationException) {
+            throw error
+        } catch (exception: Exception) {
+            request.result.completeExceptionally(exception)
+        } finally {
+            if (!currentCoroutineContext().isActive) {
+                request.result.cancel()
             }
-            request.result.completeExceptionally(error)
         }
     }
 

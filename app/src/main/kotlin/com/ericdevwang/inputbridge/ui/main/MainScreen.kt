@@ -37,6 +37,7 @@ import com.ericdevwang.inputbridge.core.designsystem.InputBridgeTheme
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
+@Suppress("FunctionName")
 fun MainScreen() {
     val viewModel: MainScreenViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -50,6 +51,7 @@ fun MainScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("FunctionName")
 fun MainScreenContent(
     uiState: MainScreenUiState,
     onTextChanged: (TextFieldValue) -> Unit,
@@ -177,6 +179,7 @@ fun MainScreenContent(
 
 @Preview(showBackground = true)
 @Composable
+@Suppress("FunctionName", "UnusedPrivateFunction")
 private fun MainScreenPreview() {
     InputBridgeTheme {
         MainScreenContent(

@@ -140,8 +140,6 @@ class InputBridgeServer(
             }
         } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
             reject(connection, "INITIAL_SNAPSHOT_TIMEOUT", "Current text snapshot was not available in time.")
-        } catch (_: CancellationException) {
-            throw CancellationException()
         } finally {
             events.close()
             connection.close()

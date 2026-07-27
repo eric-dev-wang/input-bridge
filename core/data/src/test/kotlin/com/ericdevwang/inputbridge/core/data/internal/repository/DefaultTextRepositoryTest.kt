@@ -265,6 +265,7 @@ class DefaultTextRepositoryTest {
 
 private class FakeTextDataSource(initialState: TextState) : TextDataSource {
     private val mutableState = MutableStateFlow(initialState.toPersistedTextState())
+    override val state: Flow<PersistedTextState> = mutableState
 
     var writeGate: CompletableDeferred<Unit>? = null
     val persisted = mutableListOf<TextState>()
@@ -274,8 +275,6 @@ private class FakeTextDataSource(initialState: TextState) : TextDataSource {
     fun emitPersisted(state: TextState) {
         mutableState.value = state.toPersistedTextState()
     }
-
-    override val state: Flow<PersistedTextState> = mutableState
 
     override suspend fun saveIfNewer(state: PersistedTextState): Boolean {
         writeGate?.let { gate ->

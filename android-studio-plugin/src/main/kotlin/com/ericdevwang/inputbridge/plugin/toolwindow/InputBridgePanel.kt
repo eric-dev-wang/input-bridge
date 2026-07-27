@@ -80,9 +80,11 @@ class InputBridgePanel(
                 cellHasFocus,
             )
         }
-        deviceSelector.addActionListener {
+        deviceSelector.addActionListener { _ ->
             if (!updatingDeviceSelector) {
-                (deviceSelector.selectedItem as? AdbDevice)?.let { controller.selectDevice(it.serial) }
+                (deviceSelector.selectedItem as? AdbDevice)?.let { device ->
+                    controller.selectDevice(device.serial)
+                }
             }
         }
         controller.addListener(listener)

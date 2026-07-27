@@ -38,7 +38,7 @@ Copy / Copy & Clear
 ```text
 .
 ├── app/                    # Android App UI、Foreground Service、TCP Server
-├── build-logic/convention/ # Android、Kotlin/JVM、Koin Convention Plugins
+├── build-logic/convention/ # Android、Kotlin/JVM、Android Studio、Koin、Detekt Convention Plugins
 ├── protocol/               # 纯 Kotlin/JVM 共享协议模型
 ├── core/datastore/         # Android DataStore 实现和 TextDataSource
 ├── core/data/              # TextRepository 和数据层状态模型
@@ -63,7 +63,29 @@ Copy / Copy & Clear
 ./gradlew :app:lintDebug
 ./gradlew :app:testDebugUnitTest
 ./gradlew :protocol:test
+./gradlew detektAll
 ```
+
+Detekt 默认会启用 auto-correct，适合本地整理代码。`detektAll` 只运行轻量的 main/test/androidTest 源码检查；
+Release workflow 会单独执行带类型解析的 `detektRelease`，该任务会先依赖对应的 release Kotlin 编译：
+
+```bash
+./gradlew detektAll
+./gradlew -PdetektAutoCorrect=false detektRelease
+```
+
+CI 和 Release 会显式关闭 auto-correct，并在发现问题时使构建失败：
+
+```bash
+./gradlew -PdetektAutoCorrect=false detektAll
+```
+
+CI 使用 Gradle Actions 管理 Gradle build cache，以减少重复的依赖、编译和 Detekt 检查开销。
+
+规则配置位于 [`config/detekt/detekt.yml`](config/detekt/detekt.yml)。Detekt 扫描各模块的
+`main`、`test` 和 `androidTest` Kotlin 源码，不使用 baseline；本地运行前请检查工作树，因为
+auto-correct 可能修改源文件。项目不单独运行 ktlint；Detekt 仅通过 ktlint wrapper 启用
+`Indentation` 规则，并将缩进宽度设为 4 个空格，不启用其它 ktlint 或 Compose 专用规则。
 
 Plugin 默认使用 IntelliJ IDEA 2026.1.1 和 Android plugin 261.23567.138 构建及测试：
 

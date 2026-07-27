@@ -10,7 +10,9 @@ internal object BridgeLog {
     }
 
     fun adbCommand(command: String, exitCode: Int?, timedOut: Boolean) {
-        logger.info("ADB command completed: command=$command, exitCode=$exitCode, timedOut=$timedOut")
+        logger.info(
+            "ADB command completed: command=$command, exitCode=${exitCode ?: "unknown"}, timedOut=$timedOut",
+        )
     }
 
     fun clipboardWrite(success: Boolean, exception: Throwable? = null) {
