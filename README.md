@@ -80,8 +80,7 @@ CI 和 Release 会显式关闭 auto-correct，并在发现问题时使构建失�
 ./gradlew -PdetektAutoCorrect=false detektAll
 ```
 
-CI 使用 Gradle Actions 持久化 Gradle build cache；源码或配置未变化时，Detekt 任务应当可以从
-缓存恢复，日志中会显示 `FROM-CACHE`。
+CI 使用 Gradle Actions 管理 Gradle build cache，以减少重复的依赖、编译和 Detekt 检查开销。
 
 规则配置位于 [`config/detekt/detekt.yml`](config/detekt/detekt.yml)。Detekt 扫描各模块的
 `main`、`test` 和 `androidTest` Kotlin 源码，不使用 baseline；本地运行前请检查工作树，因为

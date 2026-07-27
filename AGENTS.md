@@ -83,7 +83,7 @@ Plugin tasks default to IntelliJ IDEA 2026.1.1 with Android plugin `261.23567.13
 
 ## Coding Style & Naming Conventions
 
-Use Kotlin official style with four-space indentation. Use `PascalCase` for classes and composables, `camelCase` for functions and properties, and `UPPER_SNAKE_CASE` only for constants. Keep files focused by responsibility and prefer explicit interfaces between storage, server, ADB, TCP, clipboard, and UI layers. Follow Compose conventions in the Android App and IntelliJ/Swing threading rules in the plugin.
+Use Kotlin official style with four-space indentation using spaces; do not use tabs. Use `PascalCase` for classes and composables, `camelCase` for functions and properties, and `UPPER_SNAKE_CASE` only for constants. Keep files focused by responsibility and prefer explicit interfaces between storage, server, ADB, TCP, clipboard, and UI layers. Follow Compose conventions in the Android App and IntelliJ/Swing threading rules in the plugin.
 
 ## Testing Guidelines
 

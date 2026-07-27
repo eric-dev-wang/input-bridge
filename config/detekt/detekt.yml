@@ -100,3 +100,5 @@ style:
     active: false
   ThrowsCount:
     active: false
+  NoTabs:
+    active: true
