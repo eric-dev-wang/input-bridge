@@ -84,7 +84,8 @@ CI 使用 Gradle Actions 管理 Gradle build cache，以减少重复的依赖、
 
 规则配置位于 [`config/detekt/detekt.yml`](config/detekt/detekt.yml)。Detekt 扫描各模块的
 `main`、`test` 和 `androidTest` Kotlin 源码，不使用 baseline；本地运行前请检查工作树，因为
-auto-correct 可能修改源文件。项目不引入 ktlint 或 Compose 专用 Detekt 规则。
+auto-correct 可能修改源文件。项目不单独运行 ktlint；Detekt 仅通过 ktlint wrapper 启用
+`Indentation` 规则，并将缩进宽度设为 4 个空格，不启用其它 ktlint 或 Compose 专用规则。
 
 Plugin 默认使用 IntelliJ IDEA 2026.1.1 和 Android plugin 261.23567.138 构建及测试：
 

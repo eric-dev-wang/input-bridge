@@ -75,7 +75,8 @@ Local `detektAll` runs lightweight main/test/androidTest source checks with auto
 and may modify source files. Release verification runs the type-resolution `detektRelease` checks, which depend
 on the corresponding release Kotlin compilation. CI and Release
 must pass `-PdetektAutoCorrect=false`, so findings fail the build instead of changing files. Do not add a
-Detekt baseline, ktlint rules, or Compose-specific rules without an explicit scope decision.
+Detekt baseline. The Detekt KtLint wrapper is intentionally limited to the `Indentation` rule with a four-space indent;
+do not add other ktlint formatting or Compose-specific rules without an explicit scope decision.
 
 Use `adb forward tcp:18080 tcp:18080` for manual end-to-end checks. TCP and ADB operations must run off the IntelliJ EDT and use bounded timeouts.
 
@@ -83,7 +84,7 @@ Plugin tasks default to IntelliJ IDEA 2026.1.1 with Android plugin `261.23567.13
 
 ## Coding Style & Naming Conventions
 
-Use Kotlin official style with four-space indentation using spaces; do not use tabs. Use `PascalCase` for classes and composables, `camelCase` for functions and properties, and `UPPER_SNAKE_CASE` only for constants. Keep files focused by responsibility and prefer explicit interfaces between storage, server, ADB, TCP, clipboard, and UI layers. Follow Compose conventions in the Android App and IntelliJ/Swing threading rules in the plugin.
+Use Kotlin official style with four-space indentation. Use `PascalCase` for classes and composables, `camelCase` for functions and properties, and `UPPER_SNAKE_CASE` only for constants. Keep files focused by responsibility and prefer explicit interfaces between storage, server, ADB, TCP, clipboard, and UI layers. Follow Compose conventions in the Android App and IntelliJ/Swing threading rules in the plugin.
 
 ## Testing Guidelines
 

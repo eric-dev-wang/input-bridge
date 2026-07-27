@@ -15,10 +15,10 @@ fun MainNavigation() {
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
         entryProvider =
-            entryProvider {
-                entry<Main> {
-                    MainScreen()
-                }
-            },
+        entryProvider {
+            entry<Main> {
+                MainScreen()
+            }
+        },
     )
 }

@@ -3,11 +3,14 @@ package com.ericdevwang.inputbridge.buildlogic
 import dev.detekt.gradle.Detekt
 import dev.detekt.gradle.extensions.DetektExtension
 import org.gradle.api.Project
+import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 
 private const val DETEKT_AUTO_CORRECT_PROPERTY = "detektAutoCorrect"
+private const val DETEKT_KTLINT_WRAPPER_MODULE = "dev.detekt:detekt-rules-ktlint-wrapper"
 
 internal fun Project.configureDetekt() {
     pluginManager.apply("dev.detekt")
@@ -26,6 +29,14 @@ internal fun Project.configureDetekt() {
         ignoreFailures.set(false)
         autoCorrect.set(autoCorrectProvider)
     }
+
+    val detektVersion = rootProject.extensions
+        .getByType<VersionCatalogsExtension>()
+        .named("libs")
+        .findVersion("detekt")
+        .get()
+        .requiredVersion
+    dependencies.add("detektPlugins", "$DETEKT_KTLINT_WRAPPER_MODULE:$detektVersion")
 
     tasks.withType<Detekt>().configureEach {
         autoCorrect.set(autoCorrectProvider)
